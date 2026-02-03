@@ -1,0 +1,37 @@
+/* ===== Layout base ===== */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: #fff;
+  border-right: 1px solid #e5e7eb;
+}
+
+/* ===== Main ===== */
+.main-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  background: #f8f9fa;
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    height: 100vh;
+    z-index: 1050;
+    transition: left 0.3s ease;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+}
