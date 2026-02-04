@@ -1,7 +1,7 @@
+
 export default function Inventory() {
   return (
     <div className="container-fluid">
-
       {/* Header */}
       <div className="mb-4">
         <h3 className="fw-bold mb-1">Gestión de Inventario</h3>
@@ -101,10 +101,10 @@ export default function Inventory() {
 
       {/* Categories */}
       <div className="row g-3">
-
         <CategoryCard
           title="Todos"
           value="13"
+          badge="3 bajo"
           icon="bi-funnel"
           active
         />
@@ -114,6 +114,7 @@ export default function Inventory() {
           value="4"
           badge="3 bajo"
           icon="bi-cup-straw"
+          active
         />
 
         <CategoryCard
@@ -142,15 +143,21 @@ export default function Inventory() {
           value="0"
           icon="bi-box"
         />
-
       </div>
-
     </div>
   );
 }
 
 /* ===== Category Card Component ===== */
-function CategoryCard({ title, value, badge, icon, active }) {
+interface CategoryCardProps {
+  title: string;
+  value: string;
+  icon: string;
+  badge?: string;   // opcional
+  active?: boolean; // opcional
+}
+
+function CategoryCard({ title, value, badge, icon, active = false }: CategoryCardProps) {
   return (
     <div className="col-6 col-md-4 col-xl-2">
       <div className={`card text-center h-100 ${active ? "border-primary" : ""}`}>
