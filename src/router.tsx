@@ -10,6 +10,7 @@ import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Register from "./pages/Register";
+import Settings from "./pages/Settings";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <Login />,
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
       { path: "pos", element: <Cashier /> },
       { path: "provedores", element: <SupplierPayments /> },
       { path: "reportes", element: <Reports /> },
+      { path: "configuracion", element: <Settings /> },
     ],
   },
 ]);

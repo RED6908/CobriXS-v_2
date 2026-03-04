@@ -3,23 +3,33 @@ import { supabase } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
 
 const Register: React.FC = () => {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
+    // Validaciones básicas
+    if (password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden");
       return;
     }
+
+    setLoading(true);
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -28,10 +38,19 @@ const Register: React.FC = () => {
 
     if (error) {
       setError(error.message);
-    } else {
-      setSuccess("Usuario registrado correctamente. Revisa tu correo para confirmar.");
-      setTimeout(() => navigate("/login"), 2000);
+      setLoading(false);
+      return;
     }
+
+    setSuccess(
+      "Usuario registrado correctamente. Revisa tu correo para confirmar tu cuenta."
+    );
+
+    setTimeout(() => {
+      navigate("/login");
+    }, 2500);
+
+    setLoading(false);
   };
 
   return (
@@ -52,6 +71,7 @@ const Register: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
 
@@ -60,10 +80,11 @@ const Register: React.FC = () => {
             <input
               type="password"
               className="form-control"
-              placeholder="Ingrese su contraseña"
+              placeholder="Mínimo 6 caracteres"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
 
@@ -76,23 +97,48 @@ const Register: React.FC = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
 
-          {error && <p className="text-danger small mb-3">{error}</p>}
-          {success && <p className="text-success small mb-3">{success}</p>}
+          {error && (
+            <div className="alert alert-danger py-2 small">
+              {error}
+            </div>
+          )}
 
-          <button type="submit" className="btn btn-primary w-100">
-            Registrarse
+          {success && (
+            <div className="alert alert-success py-2 small">
+              {success}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="btn btn-primary w-100"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" />
+                Registrando...
+              </>
+            ) : (
+              "Registrarse"
+            )}
           </button>
         </form>
 
         <div className="mt-3 text-center">
           <small>
             ¿Ya tienes cuenta?{" "}
-            <a href="/login" className="text-primary fw-semibold">
+            <span
+              onClick={() => navigate("/login")}
+              className="text-primary fw-semibold"
+              style={{ cursor: "pointer" }}
+            >
               Inicia sesión
-            </a>
+            </span>
           </small>
         </div>
       </div>

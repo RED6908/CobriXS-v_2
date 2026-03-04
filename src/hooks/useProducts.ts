@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { Product } from "../types/database";
 import { getProducts } from "../services/products.service";
 
@@ -7,22 +7,29 @@ export function useProducts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadProducts() {
-      try {
-        setLoading(true);
-        const data = await getProducts();
-        setProducts(data);
-      } catch (err) {
-        setError("Error al cargar productos");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
+  const refetch = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    loadProducts();
+      const data = await getProducts();
+      setProducts(data);
+    } catch (err) {
+      console.error(err);
+      setError("Error al cargar productos");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { products, loading, error };
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return {
+    products,
+    loading,
+    error,
+    refetch,
+  };
 }

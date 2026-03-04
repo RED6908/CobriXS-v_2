@@ -1,14 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { useNavigate } from "react-router-dom";
 
 const Login: React.FC = () => {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  /* ================================
+     VERIFICAR SESIÓN ACTIVA
+  ================================= */
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate("/dashboard");
+      }
+    };
+
+    checkSession();
+  }, [navigate]);
+
+  /* ================================
+     LOGIN
+  ================================= */
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -16,12 +40,21 @@ const Login: React.FC = () => {
     });
 
     if (error) {
-      setError(error.message);
-    } else {
-      console.log("Usuario autenticado:", data.user);
-      // Aquí puedes redirigir al dashboard
+      setError("Correo o contraseña incorrectos");
+      setLoading(false);
+      return;
     }
+
+    if (data.user) {
+      navigate("/dashboard");
+    }
+
+    setLoading(false);
   };
+
+  /* ================================
+     RENDER
+  ================================= */
 
   return (
     <div className="d-flex align-items-center justify-content-center vh-100 bg-primary">
@@ -41,6 +74,7 @@ const Login: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
 
@@ -53,22 +87,38 @@ const Login: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
 
-          {error && <p className="text-danger small mb-3">{error}</p>}
+          {error && (
+            <div className="alert alert-danger py-2 small">
+              {error}
+            </div>
+          )}
 
-          <button type="submit" className="btn btn-primary w-100">
-            Iniciar sesión
+          <button
+            type="submit"
+            className="btn btn-primary w-100"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" />
+                Iniciando sesión...
+              </>
+            ) : (
+              "Iniciar sesión"
+            )}
           </button>
         </form>
 
-        {/* Caja de usuarios de prueba */}
+        {/* Usuarios de prueba */}
         <div className="mt-4 bg-light p-3 rounded">
           <h6 className="fw-semibold mb-2">Usuarios de prueba:</h6>
-          <ul className="list-unstyled small text-muted">
+          <ul className="list-unstyled small text-muted mb-0">
             <li>
-              Administrador: <strong>admin@cobrixs.com</strong>
+              Admin: <strong>admin@cobrixs.com</strong>
             </li>
             <li>
               Vendedor: <strong>maria@cobrixs.com</strong>
