@@ -18,3 +18,9 @@ export interface Provider {
   balance: number;
   created_at: string;
 }
+
+export interface Sale {
+  id: string;
+  total: number;
+  created_at: string;
+}

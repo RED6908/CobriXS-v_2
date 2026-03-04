@@ -1,174 +1,85 @@
+import { useMemo } from "react";
+import { useProducts } from "../hooks/useProducts";
 
 export default function Inventory() {
+  const { products, loading, error } = useProducts();
+
+  const inventoryValue = useMemo(
+    () => products.reduce((acc, product) => acc + (product.purchase_price ?? 0) * product.stock, 0),
+    [products],
+  );
+  const lowStockCount = products.filter((product) => product.stock <= 5).length;
+
   return (
     <div className="container-fluid">
-      {/* Header */}
       <div className="mb-4">
         <h3 className="fw-bold mb-1">Gestión de Inventario</h3>
-        <p className="text-muted">
-          Control completo de productos, stock y movimientos
-        </p>
+        <p className="text-muted">Control completo desde Supabase</p>
       </div>
 
-      {/* Stats */}
+      {loading && <div className="alert alert-info">Cargando inventario...</div>}
+      {error && <div className="alert alert-danger">{error}</div>}
+
       <div className="row g-3 mb-4">
-        <div className="col-12 col-md-6 col-xl-3">
-          <div className="card h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between">
-                <span className="text-muted">Productos Totales</span>
-                <i className="bi bi-box text-primary" />
-              </div>
-              <h3 className="fw-bold mt-2">13</h3>
-              <small className="text-muted">En 5 categorías</small>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-12 col-md-6 col-xl-3">
-          <div className="card h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between">
-                <span className="text-muted">Alertas de Stock</span>
-                <i className="bi bi-exclamation-triangle text-danger" />
-              </div>
-              <h3 className="fw-bold mt-2">6</h3>
-              <small className="text-muted">1 críticos</small>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-12 col-md-6 col-xl-3">
-          <div className="card h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between">
-                <span className="text-muted">Valor Total</span>
-                <i className="bi bi-graph-up text-success" />
-              </div>
-              <h3 className="fw-bold mt-2">$4,735</h3>
-              <small className="text-muted">Inventario actual</small>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-12 col-md-6 col-xl-3">
-          <div className="card h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between">
-                <span className="text-muted">Movimientos</span>
-                <i className="bi bi-activity text-purple" />
-              </div>
-              <h3 className="fw-bold mt-2">5</h3>
-              <small className="text-muted">Registros totales</small>
-            </div>
-          </div>
-        </div>
+        <StatCard label="Productos Totales" value={`${products.length}`} icon="bi-box" />
+        <StatCard label="Alertas de Stock" value={`${lowStockCount}`} icon="bi-exclamation-triangle" />
+        <StatCard label="Valor Total" value={`$${inventoryValue.toFixed(2)}`} icon="bi-graph-up" />
+        <StatCard label="Categorías" value={`${new Set(products.map((p) => p.category ?? "Sin categoría")).size}`} icon="bi-tags" />
       </div>
 
-      {/* Tabs */}
-      <div className="d-flex gap-2 mb-4 overflow-auto">
-        <button className="btn btn-light fw-semibold active">
-          <i className="bi bi-box me-1" /> Productos
-        </button>
-        <button className="btn btn-light">
-          <i className="bi bi-arrow-left-right me-1" /> Movimientos
-        </button>
-        <button className="btn btn-light">
-          <i className="bi bi-exclamation-triangle me-1" /> Alertas (6)
-        </button>
-        <button className="btn btn-light">
-          <i className="bi bi-bar-chart me-1" /> Análisis
-        </button>
-      </div>
-
-      {/* Search + Button */}
-      <div className="d-flex flex-column flex-md-row gap-3 mb-4">
-        <div className="input-group">
-          <span className="input-group-text bg-white">
-            <i className="bi bi-search" />
-          </span>
-          <input
-            className="form-control"
-            placeholder="Buscar por nombre o código..."
-          />
+      <div className="card shadow-sm">
+        <div className="table-responsive">
+          <table className="table align-middle mb-0">
+            <thead className="table-light">
+              <tr>
+                <th>Producto</th>
+                <th>Código</th>
+                <th>Categoría</th>
+                <th>Stock</th>
+                <th>Última actualización</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id}>
+                  <td>{product.name}</td>
+                  <td>{product.code ?? "-"}</td>
+                  <td>{product.category ?? "Sin categoría"}</td>
+                  <td>{product.stock}</td>
+                  <td>{new Date(product.created_at).toLocaleDateString("es-MX")}</td>
+                </tr>
+              ))}
+              {products.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center text-muted py-4">
+                    No hay inventario registrado
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-
-        <button className="btn btn-primary ms-md-auto">
-          <i className="bi bi-plus-circle me-1" />
-          Nuevo Movimiento
-        </button>
-      </div>
-
-      {/* Categories */}
-      <div className="row g-3">
-        <CategoryCard
-          title="Todos"
-          value="13"
-          badge="3 bajo"
-          icon="bi-funnel"
-          active
-        />
-
-        <CategoryCard
-          title="Bebidas"
-          value="4"
-          badge="3 bajo"
-          icon="bi-cup-straw"
-          active
-        />
-
-        <CategoryCard
-          title="Alimentos"
-          value="4"
-          badge="1 bajo"
-          icon="bi-apple"
-        />
-
-        <CategoryCard
-          title="Higiene"
-          value="3"
-          badge="1 bajo"
-          icon="bi-stars"
-        />
-
-        <CategoryCard
-          title="Hogar"
-          value="2"
-          badge="1 bajo"
-          icon="bi-house"
-        />
-
-        <CategoryCard
-          title="Otros"
-          value="0"
-          icon="bi-box"
-        />
       </div>
     </div>
   );
 }
 
-/* ===== Category Card Component ===== */
-interface CategoryCardProps {
-  title: string;
+interface StatCardProps {
+  label: string;
   value: string;
   icon: string;
-  badge?: string;   // opcional
-  active?: boolean; // opcional
 }
 
-function CategoryCard({ title, value, badge, icon, active = false }: CategoryCardProps) {
+function StatCard({ label, value, icon }: StatCardProps) {
   return (
-    <div className="col-6 col-md-4 col-xl-2">
-      <div className={`card text-center h-100 ${active ? "border-primary" : ""}`}>
+    <div className="col-12 col-md-6 col-xl-3">
+      <div className="card h-100">
         <div className="card-body">
-          <i className={`bi ${icon} fs-3 mb-2 d-block`} />
-          <div className="fw-semibold">{title}</div>
-          <h4 className="fw-bold mt-2">{value}</h4>
-
-          {badge && (
-            <span className="badge bg-danger mt-2">{badge}</span>
-          )}
+          <div className="d-flex justify-content-between">
+            <span className="text-muted">{label}</span>
+            <i className={`bi ${icon} text-primary`} />
+          </div>
+          <h3 className="fw-bold mt-2">{value}</h3>
         </div>
       </div>
     </div>

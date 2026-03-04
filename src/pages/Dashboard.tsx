@@ -1,24 +1,59 @@
+import { useEffect, useState } from "react";
+import { getProducts } from "../services/products.service";
+import { getSales } from "../services/sales.service";
+import type { Product, Sale } from "../types/database";
+
 export default function Dashboard() {
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadDashboardData() {
+      try {
+        setLoading(true);
+        const [salesData, productsData] = await Promise.all([
+          getSales(5),
+          getProducts(),
+        ]);
+
+        setSales(salesData);
+        setProducts(productsData);
+      } catch (err) {
+        console.error(err);
+        setError("No fue posible cargar el dashboard desde Supabase.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadDashboardData();
+  }, []);
+
+  const totalSales = sales.reduce((acc, sale) => acc + sale.total, 0);
+  const productsSold = sales.length;
+  const lowStockProducts = products.filter((product) => product.stock <= 5);
+
   return (
     <>
-      {/* Alert */}
       <div className="alert alert-success d-flex align-items-center mb-4">
         <i className="bi bi-display fs-4 me-3"></i>
         <div>
           <strong>Modo Escritorio:</strong>
-          <div className="small">
-            Acceso completo a todos los módulos, incluyendo el Panel de Cobro.
-          </div>
+          <div className="small">Datos sincronizados con Supabase.</div>
         </div>
       </div>
 
-      {/* Metrics */}
+      {loading && <div className="alert alert-info">Cargando datos...</div>}
+      {error && <div className="alert alert-danger">{error}</div>}
+
       <div className="row g-4 mb-4">
         {[
-          ["Ventas del día", "$15,450", "currency-dollar"],
-          ["Productos vendidos", "127", "cart"],
-          ["Productos en stock", "1,234", "box"],
-          ["Usuarios activos", "8", "people"],
+          ["Ventas recientes", `$${totalSales.toFixed(2)}`, "currency-dollar"],
+          ["Transacciones", `${productsSold}`, "cart"],
+          ["Productos en stock", `${products.length}`, "box"],
+          ["Stock bajo", `${lowStockProducts.length}`, "exclamation-triangle"],
         ].map(([title, value, icon]) => (
           <div className="col-md-3" key={title}>
             <div className="card shadow-sm h-100">
@@ -34,9 +69,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Lists */}
       <div className="row g-4">
-        {/* Ventas */}
         <div className="col-lg-7">
           <div className="card shadow-sm h-100">
             <div className="card-header fw-semibold">
@@ -44,20 +77,19 @@ export default function Dashboard() {
               Ventas recientes
             </div>
             <ul className="list-group list-group-flush">
-              <li className="list-group-item d-flex justify-content-between">
-                #001 – 10:30 <strong>$45.50</strong>
-              </li>
-              <li className="list-group-item d-flex justify-content-between">
-                #002 – 10:15 <strong>$28.75</strong>
-              </li>
-              <li className="list-group-item d-flex justify-content-between">
-                #003 – 09:45 <strong>$67.20</strong>
-              </li>
+              {sales.map((sale) => (
+                <li className="list-group-item d-flex justify-content-between" key={sale.id}>
+                  {new Date(sale.created_at).toLocaleString("es-MX")}
+                  <strong>${sale.total.toFixed(2)}</strong>
+                </li>
+              ))}
+              {sales.length === 0 && (
+                <li className="list-group-item text-muted">Sin ventas registradas</li>
+              )}
             </ul>
           </div>
         </div>
 
-        {/* Stock bajo */}
         <div className="col-lg-5">
           <div className="card border-warning shadow-sm h-100">
             <div className="card-header fw-semibold text-warning">
@@ -65,18 +97,15 @@ export default function Dashboard() {
               Stock bajo
             </div>
             <ul className="list-group list-group-flush">
-              <li className="list-group-item d-flex justify-content-between">
-                Coca Cola 600ml
-                <span className="badge bg-danger">5 restantes</span>
-              </li>
-              <li className="list-group-item d-flex justify-content-between">
-                Pan Bimbo
-                <span className="badge bg-danger">12 restantes</span>
-              </li>
-              <li className="list-group-item d-flex justify-content-between">
-                Leche Lala
-                <span className="badge bg-danger">8 restantes</span>
-              </li>
+              {lowStockProducts.map((product) => (
+                <li className="list-group-item d-flex justify-content-between" key={product.id}>
+                  {product.name}
+                  <span className="badge bg-danger">{product.stock} restantes</span>
+                </li>
+              ))}
+              {lowStockProducts.length === 0 && (
+                <li className="list-group-item text-muted">No hay alertas de stock</li>
+              )}
             </ul>
           </div>
         </div>

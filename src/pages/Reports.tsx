@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,6 +10,9 @@ import {
   Legend,
 } from "chart.js";
 import { Line, Pie } from "react-chartjs-2";
+import { getProducts } from "../services/products.service";
+import { getSales, getSalesSummary } from "../services/sales.service";
+import type { Product, Sale } from "../types/database";
 
 ChartJS.register(
   CategoryScale,
@@ -17,96 +21,83 @@ ChartJS.register(
   LineElement,
   ArcElement,
   Tooltip,
-  Legend
+  Legend,
 );
 
 export default function Reports() {
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState({ salesCount: 0, totalAmount: 0, averageTicket: 0 });
+
+  useEffect(() => {
+    async function loadReports() {
+      try {
+        setLoading(true);
+        const [salesData, productsData, summaryData] = await Promise.all([
+          getSales(100),
+          getProducts(),
+          getSalesSummary(),
+        ]);
+
+        setSales(salesData);
+        setProducts(productsData);
+        setSummary(summaryData);
+      } catch (err) {
+        console.error(err);
+        setError("No se pudieron cargar los reportes desde Supabase.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadReports();
+  }, []);
+
   const salesTrendData = {
-    labels: ["01/10", "02/10", "03/10", "04/10", "05/10", "06/10", "07/10"],
+    labels: sales.slice(0, 7).reverse().map((sale) => new Date(sale.created_at).toLocaleDateString("es-MX")),
     datasets: [
       {
         label: "Ventas",
-        data: [12000, 15000, 11000, 18500, 16500, 22000, 19500],
-        borderColor: "#6f6ad8",
-        backgroundColor: "rgba(111,106,216,0.15)",
+        data: sales.slice(0, 7).reverse().map((sale) => sale.total),
+        borderColor: "#3b82f6",
+        backgroundColor: "rgba(59, 130, 246, 0.25)",
         tension: 0.4,
       },
     ],
   };
 
+  const categories = Array.from(new Set(products.map((product) => product.category ?? "Sin categoría")));
   const categoryData = {
-    labels: ["Bebidas", "Despensa", "Lácteos", "Panadería", "Limpieza"],
+    labels: categories,
     datasets: [
       {
-        data: [35, 25, 20, 15, 5],
-        backgroundColor: [
-          "#4c51bf",
-          "#3182ce",
-          "#38bdf8",
-          "#059669",
-          "#f59e0b",
-        ],
+        data: categories.map(
+          (category) => products.filter((product) => (product.category ?? "Sin categoría") === category).length,
+        ),
+        backgroundColor: ["#4c51bf", "#3182ce", "#38bdf8", "#059669", "#f59e0b", "#9333ea"],
       },
     ],
   };
 
   return (
     <div className="container-fluid">
+      {loading && <div className="alert alert-info">Cargando reportes...</div>}
+      {error && <div className="alert alert-danger">{error}</div>}
 
-      {/* Stats */}
       <div className="row g-3 mb-4">
-
-        <StatCard
-          title="Ventas Totales"
-          value="$59,330"
-          change="+12.5% Este mes"
-          icon="bi-currency-dollar"
-          positive
-        />
-
-        <StatCard
-          title="Transacciones"
-          value="208"
-          change="+8.2% Este mes"
-          icon="bi-cart"
-          positive
-        />
-
-        <StatCard
-          title="Ticket Promedio"
-          value="$285.24"
-          change="+3.8% Este mes"
-          icon="bi-graph-up"
-          positive
-        />
-
-        <StatCard
-          title="Productos Vendidos"
-          value="435"
-          change="-2.1% Este mes"
-          icon="bi-box"
-          positive={false}
-        />
-
+        <StatCard title="Ventas Totales" value={`$${summary.totalAmount.toFixed(2)}`} change="Sincronizado" icon="bi-currency-dollar" positive />
+        <StatCard title="Transacciones" value={`${summary.salesCount}`} change="Sincronizado" icon="bi-cart" positive />
+        <StatCard title="Ticket Promedio" value={`$${summary.averageTicket.toFixed(2)}`} change="Sincronizado" icon="bi-graph-up" positive />
+        <StatCard title="Productos" value={`${products.length}`} change="Sincronizado" icon="bi-box" positive />
       </div>
 
-      {/* Tabs */}
-      <div className="d-flex gap-2 mb-4">
-        <button className="btn btn-light fw-semibold">Dashboard</button>
-        <button className="btn btn-outline-secondary">Ventas</button>
-        <button className="btn btn-outline-secondary">Productos</button>
-        <button className="btn btn-outline-secondary">Vendedores</button>
-      </div>
-
-      {/* Charts */}
       <div className="row g-4">
-
         <div className="col-12 col-lg-7">
           <div className="card h-100">
             <div className="card-body">
-              <h5 className="fw-semibold mb-3">
-                Tendencia de Ventas (7 días)
-              </h5>
+              <h5 className="fw-semibold mb-3">Tendencia de Ventas</h5>
               <Line data={salesTrendData} />
             </div>
           </div>
@@ -115,21 +106,25 @@ export default function Reports() {
         <div className="col-12 col-lg-5">
           <div className="card h-100">
             <div className="card-body">
-              <h5 className="fw-semibold mb-3">
-                Ventas por Categoría
-              </h5>
+              <h5 className="fw-semibold mb-3">Productos por Categoría</h5>
               <Pie data={categoryData} />
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
 }
 
-/* ===== Reusable Card ===== */
-function StatCard({ title, value, change, icon, positive }) {
+interface StatCardProps {
+  title: string;
+  value: string;
+  change: string;
+  icon: string;
+  positive: boolean;
+}
+
+function StatCard({ title, value, change, icon, positive }: StatCardProps) {
   return (
     <div className="col-12 col-md-6 col-xl-3">
       <div className="card h-100">
@@ -137,11 +132,7 @@ function StatCard({ title, value, change, icon, positive }) {
           <div>
             <p className="text-muted mb-1">{title}</p>
             <h4 className="fw-bold mb-1">{value}</h4>
-            <small
-              className={positive ? "text-success" : "text-danger"}
-            >
-              {change}
-            </small>
+            <small className={positive ? "text-success" : "text-danger"}>{change}</small>
           </div>
           <i className={`bi ${icon} fs-2 text-muted`} />
         </div>
