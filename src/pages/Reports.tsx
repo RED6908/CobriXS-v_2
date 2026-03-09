@@ -31,6 +31,7 @@ interface StatCardProps {
 }
 
 export default function Reports() {
+  /* ===== Data ===== */
   const salesTrendData = {
     labels: ["01/10", "02/10", "03/10", "04/10", "05/10", "06/10", "07/10"],
     datasets: [
@@ -63,6 +64,7 @@ export default function Reports() {
 
   return (
     <div className="container-fluid">
+
       {/* ===== Stats ===== */}
       <div className="row g-3 mb-4">
         <StatCard
@@ -108,6 +110,7 @@ export default function Reports() {
 
       {/* ===== Charts ===== */}
       <div className="row g-4">
+
         <div className="col-12 col-lg-7">
           <div className="card h-100 shadow-sm">
             <div className="card-body">
@@ -129,12 +132,13 @@ export default function Reports() {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
 }
 
-/* ===== Reusable Card ===== */
+/* ===== Reusable Stat Card ===== */
 const StatCard: FC<StatCardProps> = ({
   title,
   value,

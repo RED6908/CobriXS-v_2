@@ -1,11 +1,13 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../lib/supabase";
 import { useSettings } from "../context/SettingsContext";
 
 export default function Sidebar() {
+
   const { profile } = useAuth();
   const { t } = useSettings();
+  const navigate = useNavigate();
 
   const isAdmin = profile?.role === "admin";
 
@@ -15,8 +17,18 @@ export default function Sidebar() {
     }`;
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error("Error al cerrar sesión:", error.message);
+        return;
+      }
+
+      navigate("/login");
+    } catch (err) {
+      console.error("Error inesperado:", err);
+    }
   };
 
   return (
@@ -32,6 +44,7 @@ export default function Sidebar() {
         >
           <i className="bi bi-shop text-white" />
         </div>
+
         <div>
           <strong>CobriXS</strong>
           <div className="text-muted small">
@@ -42,6 +55,7 @@ export default function Sidebar() {
 
       {/* Menu */}
       <ul className="nav nav-pills flex-column gap-2 mb-auto">
+
         <li className="nav-item">
           <NavLink to="/" end className={linkClass}>
             <i className="bi bi-house" /> {t.dashboard}
@@ -82,24 +96,29 @@ export default function Sidebar() {
           </li>
         )}
 
-        <li className="nav-item">
-          <NavLink to="/reportes" className={linkClass}>
-            <i className="bi bi-bar-chart" /> {t.reports}
-          </NavLink>
-        </li>
+        {isAdmin && (
+          <li className="nav-item">
+            <NavLink to="/reportes" className={linkClass}>
+              <i className="bi bi-bar-chart" /> {t.reports}
+            </NavLink>
+          </li>
+        )}
 
         <li className="nav-item">
           <NavLink to="/configuracion" className={linkClass}>
             <i className="bi bi-gear" /> {t.settings}
           </NavLink>
         </li>
+
       </ul>
 
       {/* Footer */}
       <div className="border-top pt-3">
+
         <div className="small fw-semibold">
           {profile?.name || "Usuario"}
         </div>
+
         <div className="text-muted small">
           {profile?.role === "admin"
             ? "Administrador"
@@ -113,6 +132,7 @@ export default function Sidebar() {
           <i className="bi bi-box-arrow-right me-1" />
           {t.logout}
         </button>
+
       </div>
     </aside>
   );

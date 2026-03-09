@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useInventory } from "../hooks/useInventory";
 
 type Tab = "productos" | "movimientos" | "alertas";
@@ -9,7 +9,6 @@ export default function Inventory() {
 
   const [activeTab, setActiveTab] = useState<Tab>("productos");
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("Todos");
   const [showModal, setShowModal] = useState(false);
 
   const [form, setForm] = useState({
@@ -22,30 +21,36 @@ export default function Inventory() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  /* ================================
-     FILTROS
-  ================================= */
+  /* ===============================
+     FILTRO PRODUCTOS
+  =============================== */
 
-  const categories = [
-    "Todos",
-    ...Array.from(new Set(products.map((p) => p.category ?? "Sin categoría"))),
-  ];
+  const filteredProducts = useMemo(() => {
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        (p.code ?? "").toLowerCase().includes(search.toLowerCase())
+    );
+  }, [products, search]);
 
-  const filteredProducts = products.filter((p) => {
-    const matchSearch =
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (p.code ?? "").toLowerCase().includes(search.toLowerCase());
+  /* ===============================
+     CATEGORÍAS DINÁMICAS
+  =============================== */
 
-    const matchCat =
-      categoryFilter === "Todos" ||
-      (p.category ?? "Sin categoría") === categoryFilter;
+  const categories = useMemo(() => {
+    const grouped: Record<string, number> = {};
 
-    return matchSearch && matchCat;
-  });
+    products.forEach((p) => {
+      const cat = p.category ?? "Sin categoría";
+      grouped[cat] = (grouped[cat] || 0) + 1;
+    });
 
-  /* ================================
+    return grouped;
+  }, [products]);
+
+  /* ===============================
      GUARDAR MOVIMIENTO
-  ================================= */
+  =============================== */
 
   const handleSaveMovement = useCallback(async () => {
     if (!form.product_id) {
@@ -54,7 +59,7 @@ export default function Inventory() {
     }
 
     if (form.quantity <= 0) {
-      setFormError("La cantidad debe ser mayor a 0");
+      setFormError("Cantidad inválida");
       return;
     }
 
@@ -77,177 +82,142 @@ export default function Inventory() {
         description: "",
       });
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : "Error al guardar");
+      setFormError("Error al guardar");
     } finally {
       setSaving(false);
     }
   }, [form, addMovement]);
 
-  /* ================================
+  /* ===============================
      LOADING / ERROR
-  ================================= */
+  =============================== */
 
-  if (loading) {
+  if (loading)
     return (
       <div className="text-center py-5">
         <div className="spinner-border text-primary" />
-        <p className="mt-3 text-muted">Cargando inventario...</p>
       </div>
     );
-  }
 
-  if (error) {
-    return <div className="alert alert-danger">{error}</div>;
-  }
+  if (error) return <div className="alert alert-danger">{error}</div>;
 
-  /* ================================
+  /* ===============================
      RENDER
-  ================================= */
+  =============================== */
 
   return (
     <div className="container-fluid">
       {/* Header */}
       <div className="mb-4">
         <h3 className="fw-bold mb-1">Gestión de Inventario</h3>
-        <p className="text-muted mb-0">
+        <p className="text-muted">
           Control completo de productos, stock y movimientos
         </p>
       </div>
 
-      {/* Stats */}
+      {/* Stats Modernos */}
       <div className="row g-3 mb-4">
-        <div className="col-md-3">
-          <div className="card">
-            <div className="card-body">
-              <div className="text-muted small">Productos Totales</div>
-              <h3 className="fw-bold">{stats.total}</h3>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Productos Totales"
+          value={stats.total}
+          subtitle={`${Object.keys(categories).length} categorías`}
+          icon="bi-box"
+          color="primary"
+        />
 
-        <div className="col-md-3">
-          <div className="card">
-            <div className="card-body">
-              <div className="text-muted small">Alertas Stock</div>
-              <h3 className="fw-bold text-danger">
-                {stats.lowStock.length}
-              </h3>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Alertas de Stock"
+          value={stats.lowStock.length}
+          subtitle="Stock menor a 10"
+          icon="bi-exclamation-triangle"
+          color="danger"
+        />
 
-        <div className="col-md-3">
-          <div className="card">
-            <div className="card-body">
-              <div className="text-muted small">Valor Total</div>
-              <h3 className="fw-bold">
-                $
-                {stats.totalValue.toLocaleString("es-MX", {
-                  minimumFractionDigits: 2,
-                })}
-              </h3>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Valor Total"
+          value={`$${stats.totalValue.toLocaleString("es-MX", {
+            minimumFractionDigits: 2,
+          })}`}
+          subtitle="Inventario actual"
+          icon="bi-graph-up"
+          color="success"
+        />
 
-        <div className="col-md-3">
-          <div className="card">
-            <div className="card-body">
-              <div className="text-muted small">Movimientos</div>
-              <h3 className="fw-bold">{stats.movementsCount}</h3>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Movimientos"
+          value={stats.movementsCount}
+          subtitle="Registros totales"
+          icon="bi-activity"
+          color="secondary"
+        />
       </div>
 
       {/* Tabs */}
-      <div className="d-flex gap-2 mb-4">
-        {(["productos", "movimientos", "alertas"] as Tab[]).map((t) => (
+      <div className="d-flex gap-2 mb-4 overflow-auto">
+        {(["productos", "movimientos", "alertas"] as Tab[]).map((tab) => (
           <button
-            key={t}
+            key={tab}
             className={`btn ${
-              activeTab === t ? "btn-primary" : "btn-light"
+              activeTab === tab ? "btn-primary" : "btn-light"
             }`}
-            onClick={() => setActiveTab(t)}
+            onClick={() => setActiveTab(tab)}
           >
-            {t}
+            {tab}
           </button>
         ))}
       </div>
 
-      {/* Search */}
-      <div className="d-flex gap-3 mb-4">
-        <input
-          className="form-control"
-          placeholder="Buscar producto..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        {activeTab === "productos" && (
-          <select
-            className="form-select w-auto"
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-          >
-            {categories.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        )}
+      {/* Search + Button */}
+      <div className="d-flex flex-column flex-md-row gap-3 mb-4">
+        <div className="input-group">
+          <span className="input-group-text bg-white">
+            <i className="bi bi-search" />
+          </span>
+          <input
+            className="form-control"
+            placeholder="Buscar por nombre o código..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
 
         <button
-          className="btn btn-primary ms-auto"
+          className="btn btn-primary ms-md-auto"
           onClick={() => setShowModal(true)}
         >
+          <i className="bi bi-plus-circle me-1" />
           Nuevo Movimiento
         </button>
       </div>
 
-      {/* PRODUCTOS */}
+      {/* PRODUCTOS TAB */}
       {activeTab === "productos" && (
-        <div className="card">
-          <div className="table-responsive">
-            <table className="table">
-              <thead className="table-light">
-                <tr>
-                  <th>Producto</th>
-                  <th>Código</th>
-                  <th>Categoría</th>
-                  <th>Stock</th>
-                  <th>Precio</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.name}</td>
-                    <td>{p.code ?? "-"}</td>
-                    <td>{p.category ?? "Sin categoría"}</td>
-                    <td>
-                      <span
-                        className={`badge ${
-                          p.stock <= 5 ? "bg-danger" : "bg-success"
-                        }`}
-                      >
-                        {p.stock}
-                      </span>
-                    </td>
-                    <td>
-                      $
-                      {(p.sale_price ?? 0).toLocaleString("es-MX", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="row g-3">
+          {Object.entries(categories).map(([cat, count]) => (
+            <CategoryCard
+              key={cat}
+              title={cat}
+              value={count}
+              badge={
+                products.filter(
+                  (p) => (p.category ?? "Sin categoría") === cat && p.stock < 10
+                ).length > 0
+                  ? `${
+                      products.filter(
+                        (p) =>
+                          (p.category ?? "Sin categoría") === cat &&
+                          p.stock < 10
+                      ).length
+                    } bajo`
+                  : undefined
+              }
+              icon="bi-funnel"
+            />
+          ))}
         </div>
       )}
 
-      {/* MOVIMIENTOS */}
+      {/* MOVIMIENTOS TAB */}
       {activeTab === "movimientos" && (
         <div className="card">
           <div className="table-responsive">
@@ -258,14 +228,13 @@ export default function Inventory() {
                   <th>Producto</th>
                   <th>Tipo</th>
                   <th>Cantidad</th>
-                  <th>Descripción</th>
                 </tr>
               </thead>
               <tbody>
                 {movements.map((m) => (
                   <tr key={m.id}>
                     <td>{new Date(m.created_at).toLocaleString()}</td>
-                    <td>{m.products?.name ?? "-"}</td>
+                    <td>{m.products?.name}</td>
                     <td>
                       <span
                         className={`badge ${
@@ -278,7 +247,6 @@ export default function Inventory() {
                       </span>
                     </td>
                     <td>{m.quantity}</td>
-                    <td>{m.description ?? "-"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -287,7 +255,7 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* ALERTAS */}
+      {/* ALERTAS TAB */}
       {activeTab === "alertas" && (
         <div className="card border-danger">
           <div className="card-body">
@@ -372,18 +340,6 @@ export default function Inventory() {
                     })
                   }
                 />
-
-                <textarea
-                  className="form-control"
-                  placeholder="Descripción"
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      description: e.target.value,
-                    })
-                  }
-                />
               </div>
 
               <div className="modal-footer">
@@ -406,6 +362,40 @@ export default function Inventory() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ===== STAT CARD ===== */
+function StatCard({ title, value, subtitle, icon, color }: any) {
+  return (
+    <div className="col-12 col-md-6 col-xl-3">
+      <div className="card h-100">
+        <div className="card-body">
+          <div className="d-flex justify-content-between">
+            <span className="text-muted">{title}</span>
+            <i className={`bi ${icon} text-${color}`} />
+          </div>
+          <h3 className="fw-bold mt-2">{value}</h3>
+          <small className="text-muted">{subtitle}</small>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== CATEGORY CARD ===== */
+function CategoryCard({ title, value, badge, icon }: any) {
+  return (
+    <div className="col-6 col-md-4 col-xl-2">
+      <div className="card text-center h-100">
+        <div className="card-body">
+          <i className={`bi ${icon} fs-3 mb-2 d-block`} />
+          <div className="fw-semibold">{title}</div>
+          <h4 className="fw-bold mt-2">{value}</h4>
+          {badge && <span className="badge bg-danger mt-2">{badge}</span>}
+        </div>
+      </div>
     </div>
   );
 }
