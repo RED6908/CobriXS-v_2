@@ -1,5 +1,110 @@
+import { useState, useMemo, useCallback } from "react";
+import { useInventory } from "../hooks/useInventory";
+
+type Tab = "productos" | "movimientos" | "alertas";
 
 export default function Inventory() {
+  const { products, movements, loading, error, stats, addMovement } =
+    useInventory();
+
+  const [activeTab, setActiveTab] = useState<Tab>("productos");
+  const [search, setSearch] = useState("");
+  const [showModal, setShowModal] = useState(false);
+
+  const [form, setForm] = useState({
+    product_id: "",
+    type: "entrada" as "entrada" | "salida",
+    quantity: 1,
+    description: "",
+  });
+
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  /* ===============================
+     FILTRO PRODUCTOS
+  =============================== */
+
+  const filteredProducts = useMemo(() => {
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        (p.code ?? "").toLowerCase().includes(search.toLowerCase())
+    );
+  }, [products, search]);
+
+  /* ===============================
+     CATEGORÍAS DINÁMICAS
+  =============================== */
+
+  const categories = useMemo(() => {
+    const grouped: Record<string, number> = {};
+
+    products.forEach((p) => {
+      const cat = p.category ?? "Sin categoría";
+      grouped[cat] = (grouped[cat] || 0) + 1;
+    });
+
+    return grouped;
+  }, [products]);
+
+  /* ===============================
+     GUARDAR MOVIMIENTO
+  =============================== */
+
+  const handleSaveMovement = useCallback(async () => {
+    if (!form.product_id) {
+      setFormError("Selecciona un producto");
+      return;
+    }
+
+    if (form.quantity <= 0) {
+      setFormError("Cantidad inválida");
+      return;
+    }
+
+    setSaving(true);
+    setFormError(null);
+
+    try {
+      await addMovement(
+        form.product_id,
+        form.type,
+        form.quantity,
+        form.description
+      );
+
+      setShowModal(false);
+      setForm({
+        product_id: "",
+        type: "entrada",
+        quantity: 1,
+        description: "",
+      });
+    } catch (e) {
+      setFormError("Error al guardar");
+    } finally {
+      setSaving(false);
+    }
+  }, [form, addMovement]);
+
+  /* ===============================
+     LOADING / ERROR
+  =============================== */
+
+  if (loading)
+    return (
+      <div className="text-center py-5">
+        <div className="spinner-border text-primary" />
+      </div>
+    );
+
+  if (error) return <div className="alert alert-danger">{error}</div>;
+
+  /* ===============================
+     RENDER
+  =============================== */
+
   return (
     <div className="container-fluid">
       {/* Header */}
@@ -10,75 +115,56 @@ export default function Inventory() {
         </p>
       </div>
 
-      {/* Stats */}
+      {/* Stats Modernos */}
       <div className="row g-3 mb-4">
-        <div className="col-12 col-md-6 col-xl-3">
-          <div className="card h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between">
-                <span className="text-muted">Productos Totales</span>
-                <i className="bi bi-box text-primary" />
-              </div>
-              <h3 className="fw-bold mt-2">13</h3>
-              <small className="text-muted">En 5 categorías</small>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Productos Totales"
+          value={stats.total}
+          subtitle={`${Object.keys(categories).length} categorías`}
+          icon="bi-box"
+          color="primary"
+        />
 
-        <div className="col-12 col-md-6 col-xl-3">
-          <div className="card h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between">
-                <span className="text-muted">Alertas de Stock</span>
-                <i className="bi bi-exclamation-triangle text-danger" />
-              </div>
-              <h3 className="fw-bold mt-2">6</h3>
-              <small className="text-muted">1 críticos</small>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Alertas de Stock"
+          value={stats.lowStock.length}
+          subtitle="Stock menor a 10"
+          icon="bi-exclamation-triangle"
+          color="danger"
+        />
 
-        <div className="col-12 col-md-6 col-xl-3">
-          <div className="card h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between">
-                <span className="text-muted">Valor Total</span>
-                <i className="bi bi-graph-up text-success" />
-              </div>
-              <h3 className="fw-bold mt-2">$4,735</h3>
-              <small className="text-muted">Inventario actual</small>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Valor Total"
+          value={`$${stats.totalValue.toLocaleString("es-MX", {
+            minimumFractionDigits: 2,
+          })}`}
+          subtitle="Inventario actual"
+          icon="bi-graph-up"
+          color="success"
+        />
 
-        <div className="col-12 col-md-6 col-xl-3">
-          <div className="card h-100">
-            <div className="card-body">
-              <div className="d-flex justify-content-between">
-                <span className="text-muted">Movimientos</span>
-                <i className="bi bi-activity text-purple" />
-              </div>
-              <h3 className="fw-bold mt-2">5</h3>
-              <small className="text-muted">Registros totales</small>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Movimientos"
+          value={stats.movementsCount}
+          subtitle="Registros totales"
+          icon="bi-activity"
+          color="secondary"
+        />
       </div>
 
       {/* Tabs */}
       <div className="d-flex gap-2 mb-4 overflow-auto">
-        <button className="btn btn-light fw-semibold active">
-          <i className="bi bi-box me-1" /> Productos
-        </button>
-        <button className="btn btn-light">
-          <i className="bi bi-arrow-left-right me-1" /> Movimientos
-        </button>
-        <button className="btn btn-light">
-          <i className="bi bi-exclamation-triangle me-1" /> Alertas (6)
-        </button>
-        <button className="btn btn-light">
-          <i className="bi bi-bar-chart me-1" /> Análisis
-        </button>
+        {(["productos", "movimientos", "alertas"] as Tab[]).map((tab) => (
+          <button
+            key={tab}
+            className={`btn ${
+              activeTab === tab ? "btn-primary" : "btn-light"
+            }`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
       {/* Search + Button */}
@@ -90,85 +176,224 @@ export default function Inventory() {
           <input
             className="form-control"
             placeholder="Buscar por nombre o código..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        <button className="btn btn-primary ms-md-auto">
+        <button
+          className="btn btn-primary ms-md-auto"
+          onClick={() => setShowModal(true)}
+        >
           <i className="bi bi-plus-circle me-1" />
           Nuevo Movimiento
         </button>
       </div>
 
-      {/* Categories */}
-      <div className="row g-3">
-        <CategoryCard
-          title="Todos"
-          value="13"
-          badge="3 bajo"
-          icon="bi-funnel"
-          active
-        />
+      {/* PRODUCTOS TAB */}
+      {activeTab === "productos" && (
+        <div className="row g-3">
+          {Object.entries(categories).map(([cat, count]) => (
+            <CategoryCard
+              key={cat}
+              title={cat}
+              value={count}
+              badge={
+                products.filter(
+                  (p) => (p.category ?? "Sin categoría") === cat && p.stock < 10
+                ).length > 0
+                  ? `${
+                      products.filter(
+                        (p) =>
+                          (p.category ?? "Sin categoría") === cat &&
+                          p.stock < 10
+                      ).length
+                    } bajo`
+                  : undefined
+              }
+              icon="bi-funnel"
+            />
+          ))}
+        </div>
+      )}
 
-        <CategoryCard
-          title="Bebidas"
-          value="4"
-          badge="3 bajo"
-          icon="bi-cup-straw"
-          active
-        />
+      {/* MOVIMIENTOS TAB */}
+      {activeTab === "movimientos" && (
+        <div className="card">
+          <div className="table-responsive">
+            <table className="table">
+              <thead className="table-light">
+                <tr>
+                  <th>Fecha</th>
+                  <th>Producto</th>
+                  <th>Tipo</th>
+                  <th>Cantidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {movements.map((m) => (
+                  <tr key={m.id}>
+                    <td>{new Date(m.created_at).toLocaleString()}</td>
+                    <td>{m.products?.name}</td>
+                    <td>
+                      <span
+                        className={`badge ${
+                          m.type === "entrada"
+                            ? "bg-success"
+                            : "bg-danger"
+                        }`}
+                      >
+                        {m.type}
+                      </span>
+                    </td>
+                    <td>{m.quantity}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-        <CategoryCard
-          title="Alimentos"
-          value="4"
-          badge="1 bajo"
-          icon="bi-apple"
-        />
+      {/* ALERTAS TAB */}
+      {activeTab === "alertas" && (
+        <div className="card border-danger">
+          <div className="card-body">
+            {stats.lowStock.length === 0 ? (
+              <div className="text-success">
+                No hay productos con stock bajo
+              </div>
+            ) : (
+              <ul className="list-group list-group-flush">
+                {stats.lowStock.map((p) => (
+                  <li
+                    key={p.id}
+                    className="list-group-item d-flex justify-content-between"
+                  >
+                    {p.name}
+                    <span className="badge bg-danger">
+                      {p.stock} restantes
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
 
-        <CategoryCard
-          title="Higiene"
-          value="3"
-          badge="1 bajo"
-          icon="bi-stars"
-        />
+      {/* MODAL */}
+      {showModal && (
+        <div className="modal fade show d-block">
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Nuevo Movimiento</h5>
+                <button
+                  className="btn-close"
+                  onClick={() => setShowModal(false)}
+                />
+              </div>
 
-        <CategoryCard
-          title="Hogar"
-          value="2"
-          badge="1 bajo"
-          icon="bi-house"
-        />
+              <div className="modal-body">
+                {formError && (
+                  <div className="alert alert-danger">{formError}</div>
+                )}
 
-        <CategoryCard
-          title="Otros"
-          value="0"
-          icon="bi-box"
-        />
+                <select
+                  className="form-select mb-3"
+                  value={form.product_id}
+                  onChange={(e) =>
+                    setForm({ ...form, product_id: e.target.value })
+                  }
+                >
+                  <option value="">Seleccionar producto</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="form-select mb-3"
+                  value={form.type}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      type: e.target.value as "entrada" | "salida",
+                    })
+                  }
+                >
+                  <option value="entrada">Entrada</option>
+                  <option value="salida">Salida</option>
+                </select>
+
+                <input
+                  type="number"
+                  className="form-control mb-3"
+                  value={form.quantity}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      quantity: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowModal(false)}
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  className="btn btn-primary"
+                  disabled={saving}
+                  onClick={handleSaveMovement}
+                >
+                  {saving ? "Guardando..." : "Guardar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ===== STAT CARD ===== */
+function StatCard({ title, value, subtitle, icon, color }: any) {
+  return (
+    <div className="col-12 col-md-6 col-xl-3">
+      <div className="card h-100">
+        <div className="card-body">
+          <div className="d-flex justify-content-between">
+            <span className="text-muted">{title}</span>
+            <i className={`bi ${icon} text-${color}`} />
+          </div>
+          <h3 className="fw-bold mt-2">{value}</h3>
+          <small className="text-muted">{subtitle}</small>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ===== Category Card Component ===== */
-interface CategoryCardProps {
-  title: string;
-  value: string;
-  icon: string;
-  badge?: string;   // opcional
-  active?: boolean; // opcional
-}
-
-function CategoryCard({ title, value, badge, icon, active = false }: CategoryCardProps) {
+/* ===== CATEGORY CARD ===== */
+function CategoryCard({ title, value, badge, icon }: any) {
   return (
     <div className="col-6 col-md-4 col-xl-2">
-      <div className={`card text-center h-100 ${active ? "border-primary" : ""}`}>
+      <div className="card text-center h-100">
         <div className="card-body">
           <i className={`bi ${icon} fs-3 mb-2 d-block`} />
           <div className="fw-semibold">{title}</div>
           <h4 className="fw-bold mt-2">{value}</h4>
-
-          {badge && (
-            <span className="badge bg-danger mt-2">{badge}</span>
-          )}
+          {badge && <span className="badge bg-danger mt-2">{badge}</span>}
         </div>
       </div>
     </div>

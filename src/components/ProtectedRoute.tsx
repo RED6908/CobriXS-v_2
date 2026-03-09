@@ -1,42 +1,94 @@
-import { Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import type { Session } from "@supabase/supabase-js";
 
-interface ProtectedRouteProps {
+interface Props {
   children: React.ReactNode;
+  role?: string;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+export default function ProtectedRoute({ children, role }: Props) {
+
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<Session | null>(null);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setLoading(false);
+
+    const checkAuth = async () => {
+
+      try {
+
+        // Obtener sesión actual
+        const { data: sessionData } = await supabase.auth.getSession();
+
+        const session = sessionData.session;
+
+        // ❌ No hay sesión
+        if (!session) {
+          setAuthorized(false);
+          setLoading(false);
+          return;
+        }
+
+        const user = session.user;
+
+        // ✅ Si no se requiere rol → solo login
+        if (!role) {
+          setAuthorized(true);
+          setLoading(false);
+          return;
+        }
+
+        // Buscar perfil del usuario
+        const { data: profile, error } = await supabase
+          .from("user_profiles")
+          .select("role")
+          .eq("user_id", user.id)
+          .single();
+
+        if (error || !profile) {
+          setAuthorized(false);
+          setLoading(false);
+          return;
+        }
+
+        // Validar rol
+        if (profile.role === role) {
+          setAuthorized(true);
+        } else {
+          setAuthorized(false);
+        }
+
+        setLoading(false);
+
+      } catch (err) {
+
+        console.error("Error verificando sesión:", err);
+        setAuthorized(false);
+        setLoading(false);
+
+      }
+
     };
 
-    getSession();
+    checkAuth();
 
-    // Escuchar cambios de sesión
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+  }, [role]);
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
+  // Pantalla de carga
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <div className="spinner-border text-primary" />
+      </div>
+    );
+  }
 
-  if (loading) return <p>Cargando...</p>;
-
-  if (!session) {
+  // ❌ No autorizado → login
+  if (!authorized) {
     return <Navigate to="/login" replace />;
   }
 
+  // ✅ Autorizado
   return <>{children}</>;
-};
-
-export default ProtectedRoute;
+}

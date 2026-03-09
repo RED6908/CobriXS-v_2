@@ -1,4 +1,14 @@
+import { useProducts } from "../hooks/useProducts";
+
 export default function Dashboard() {
+  const { products } = useProducts();
+
+  // Total stock
+  const totalStock = products.reduce((acc, p) => acc + p.stock, 0);
+
+  // Productos con stock bajo (<10)
+  const lowStock = products.filter((p) => p.stock < 10);
+
   return (
     <>
       {/* Alert */}
@@ -15,12 +25,12 @@ export default function Dashboard() {
       {/* Metrics */}
       <div className="row g-4 mb-4">
         {[
-          ["Ventas del día", "$15,450", "currency-dollar"],
-          ["Productos vendidos", "127", "cart"],
-          ["Productos en stock", "1,234", "box"],
-          ["Usuarios activos", "8", "people"],
+          ["Productos en sistema", products.length, "box"],
+          ["Stock total", totalStock, "archive"],
+          ["Productos con stock bajo", lowStock.length, "exclamation-triangle"],
+          ["Usuarios activos", 1, "people"], // puedes conectar luego a users
         ].map(([title, value, icon]) => (
-          <div className="col-md-3" key={title}>
+          <div className="col-md-3" key={title as string}>
             <div className="card shadow-sm h-100">
               <div className="card-body d-flex justify-content-between">
                 <div>
@@ -36,7 +46,7 @@ export default function Dashboard() {
 
       {/* Lists */}
       <div className="row g-4">
-        {/* Ventas */}
+        {/* Ventas recientes (puedes conectar después a tabla sales) */}
         <div className="col-lg-7">
           <div className="card shadow-sm h-100">
             <div className="card-header fw-semibold">
@@ -44,39 +54,39 @@ export default function Dashboard() {
               Ventas recientes
             </div>
             <ul className="list-group list-group-flush">
-              <li className="list-group-item d-flex justify-content-between">
-                #001 – 10:30 <strong>$45.50</strong>
-              </li>
-              <li className="list-group-item d-flex justify-content-between">
-                #002 – 10:15 <strong>$28.75</strong>
-              </li>
-              <li className="list-group-item d-flex justify-content-between">
-                #003 – 09:45 <strong>$67.20</strong>
+              <li className="list-group-item text-muted">
+                Próximamente conectado a ventas reales
               </li>
             </ul>
           </div>
         </div>
 
-        {/* Stock bajo */}
+        {/* Stock bajo dinámico */}
         <div className="col-lg-5">
           <div className="card border-warning shadow-sm h-100">
             <div className="card-header fw-semibold text-warning">
               <i className="bi bi-exclamation-triangle me-2" />
               Stock bajo
             </div>
+
             <ul className="list-group list-group-flush">
-              <li className="list-group-item d-flex justify-content-between">
-                Coca Cola 600ml
-                <span className="badge bg-danger">5 restantes</span>
-              </li>
-              <li className="list-group-item d-flex justify-content-between">
-                Pan Bimbo
-                <span className="badge bg-danger">12 restantes</span>
-              </li>
-              <li className="list-group-item d-flex justify-content-between">
-                Leche Lala
-                <span className="badge bg-danger">8 restantes</span>
-              </li>
+              {lowStock.length === 0 ? (
+                <li className="list-group-item text-muted">
+                  Todo en orden 👍
+                </li>
+              ) : (
+                lowStock.map((product) => (
+                  <li
+                    key={product.id}
+                    className="list-group-item d-flex justify-content-between"
+                  >
+                    {product.name}
+                    <span className="badge bg-danger">
+                      {product.stock} restantes
+                    </span>
+                  </li>
+                ))
+              )}
             </ul>
           </div>
         </div>

@@ -9,6 +9,7 @@ import {
   Legend,
 } from "chart.js";
 import { Line, Pie } from "react-chartjs-2";
+import type { FC } from "react";
 
 ChartJS.register(
   CategoryScale,
@@ -20,7 +21,17 @@ ChartJS.register(
   Legend
 );
 
+/* ===== Types ===== */
+interface StatCardProps {
+  title: string;
+  value: string;
+  change: string;
+  icon: string;
+  positive: boolean;
+}
+
 export default function Reports() {
+  /* ===== Data ===== */
   const salesTrendData = {
     labels: ["01/10", "02/10", "03/10", "04/10", "05/10", "06/10", "07/10"],
     datasets: [
@@ -30,6 +41,7 @@ export default function Reports() {
         borderColor: "#6f6ad8",
         backgroundColor: "rgba(111,106,216,0.15)",
         tension: 0.4,
+        fill: true,
       },
     ],
   };
@@ -53,9 +65,8 @@ export default function Reports() {
   return (
     <div className="container-fluid">
 
-      {/* Stats */}
+      {/* ===== Stats ===== */}
       <div className="row g-3 mb-4">
-
         <StatCard
           title="Ventas Totales"
           value="$59,330"
@@ -87,10 +98,9 @@ export default function Reports() {
           icon="bi-box"
           positive={false}
         />
-
       </div>
 
-      {/* Tabs */}
+      {/* ===== Tabs ===== */}
       <div className="d-flex gap-2 mb-4">
         <button className="btn btn-light fw-semibold">Dashboard</button>
         <button className="btn btn-outline-secondary">Ventas</button>
@@ -98,11 +108,11 @@ export default function Reports() {
         <button className="btn btn-outline-secondary">Vendedores</button>
       </div>
 
-      {/* Charts */}
+      {/* ===== Charts ===== */}
       <div className="row g-4">
 
         <div className="col-12 col-lg-7">
-          <div className="card h-100">
+          <div className="card h-100 shadow-sm">
             <div className="card-body">
               <h5 className="fw-semibold mb-3">
                 Tendencia de Ventas (7 días)
@@ -113,7 +123,7 @@ export default function Reports() {
         </div>
 
         <div className="col-12 col-lg-5">
-          <div className="card h-100">
+          <div className="card h-100 shadow-sm">
             <div className="card-body">
               <h5 className="fw-semibold mb-3">
                 Ventas por Categoría
@@ -128,18 +138,22 @@ export default function Reports() {
   );
 }
 
-/* ===== Reusable Card ===== */
-function StatCard({ title, value, change, icon, positive }) {
+/* ===== Reusable Stat Card ===== */
+const StatCard: FC<StatCardProps> = ({
+  title,
+  value,
+  change,
+  icon,
+  positive,
+}) => {
   return (
     <div className="col-12 col-md-6 col-xl-3">
-      <div className="card h-100">
-        <div className="card-body d-flex justify-content-between">
+      <div className="card h-100 shadow-sm">
+        <div className="card-body d-flex justify-content-between align-items-start">
           <div>
             <p className="text-muted mb-1">{title}</p>
             <h4 className="fw-bold mb-1">{value}</h4>
-            <small
-              className={positive ? "text-success" : "text-danger"}
-            >
+            <small className={positive ? "text-success" : "text-danger"}>
               {change}
             </small>
           </div>
@@ -148,4 +162,4 @@ function StatCard({ title, value, change, icon, positive }) {
       </div>
     </div>
   );
-}
+};
