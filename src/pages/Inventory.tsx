@@ -25,13 +25,13 @@ export default function Inventory() {
      FILTRO PRODUCTOS
   =============================== */
 
-  const filteredProducts = useMemo(() => {
+/*   const filteredProducts = useMemo(() => {
     return products.filter(
       (p) =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         (p.code ?? "").toLowerCase().includes(search.toLowerCase())
     );
-  }, [products, search]);
+  }, [products, search]); */
 
   /* ===============================
      CATEGORÍAS DINÁMICAS
