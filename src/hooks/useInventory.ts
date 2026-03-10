@@ -46,13 +46,18 @@ export function useInventory() {
       quantity: number,
       description: string
     ) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
+      if (!user) {
+        throw new Error("Usuario no autenticado");
+      }
+      
       await createMovement({
         product_id: productId,
         type,
         quantity,
         description,
-        user_id: user?.id ?? null,
+        user_id: user.id,
       });
       await fetchAll();
     },
