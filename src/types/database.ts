@@ -1,5 +1,6 @@
 export type UserRole = "admin" | "vendedor";
 
+
 /* =========================
    PRODUCTOS
 ========================= */
@@ -12,6 +13,16 @@ export interface Product {
   purchase_price: number | null;
   sale_price: number | null;
   created_at: string;
+  category_id: Categories["id"];
+}
+
+/* =========================
+   CATEGORIAS
+========================= */
+export interface Categories {
+  id: string;
+  name: string;
+  created_at: string;
 }
 
 /* =========================
@@ -21,11 +32,11 @@ export type MovementType = "entrada" | "salida";
 
 export interface InventoryMovement {
   id: string;
-  product_id: string;
+  product_id: Product["id"];
   type: MovementType;
   quantity: number;
   description: string | null;
-  user_id: string | null;
+  user_id: UserProfile["id"];
   created_at: string;
   products?: Pick<Product, "name" | "code">;
 }
