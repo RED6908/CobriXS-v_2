@@ -20,6 +20,47 @@
   background: #f8f9fa;
 }
 
+/* ===== Usuarios (Figma CobriXS) ===== */
+.users-page .btn-primary,
+.users-page .btn-cobrixs-primary {
+  background-color: #1e3a5f;
+  border-color: #1e3a5f;
+}
+.users-page .btn-primary:hover,
+.users-page .btn-cobrixs-primary:hover {
+  background-color: #16304d;
+  border-color: #16304d;
+}
+
+.users-page .modal-content .form-control:focus,
+.users-page .modal-content .form-select:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 0.2rem rgba(124, 58, 237, 0.25);
+}
+
+/* Users page: filter and form controls (no inline styles) */
+.users-page .filter-search-input {
+  max-width: 320px;
+}
+.users-page .filter-role-select {
+  max-width: 180px;
+}
+/* Modal overlay: full viewport dim so it's not transparent */
+.users-page .users-modal-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+}
+.users-page .modal-close-btn {
+  font-size: 1.25rem;
+}
+.users-page .form-control.readonly-date {
+  background-color: var(--bs-secondary-bg);
+}
+
 /* ===== Mobile ===== */
 @media (max-width: 768px) {
   .sidebar {

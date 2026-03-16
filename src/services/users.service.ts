@@ -57,3 +57,11 @@ export async function createUserProfile(
   });
   if (error) throw error;
 }
+
+export async function deleteUserProfile(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("user_profiles")
+    .delete()
+    .eq("user_id", userId);
+  if (error) throw error;
+}
