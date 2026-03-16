@@ -20,6 +20,53 @@
   background: #f8f9fa;
 }
 
+/* ===== Cashier (Panel de Cobro) ===== */
+.cashier-page .cashier-modal-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+}
+.cashier-page .cashier-btn-advanced {
+  background-color: #6d28d9;
+  border-color: #6d28d9;
+}
+.cashier-page .cashier-btn-advanced:hover {
+  background-color: #5b21b6;
+  border-color: #5b21b6;
+}
+.cashier-page .cashier-btn-process {
+  background-color: #6d28d9;
+  border-color: #6d28d9;
+}
+.cashier-page .cashier-btn-process:hover {
+  background-color: #5b21b6;
+  border-color: #5b21b6;
+}
+.cashier-page .min-h-300 {
+  min-height: 300px;
+}
+
+/* ===== Supplier Payments ===== */
+.supplier-payments-page .supplier-modal-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+}
+.supplier-payments-page .btn-primary {
+  background-color: #1e3a5f;
+  border-color: #1e3a5f;
+}
+.supplier-payments-page .btn-primary:hover {
+  background-color: #16304d;
+  border-color: #16304d;
+}
+
 /* ===== Mobile ===== */
 @media (max-width: 768px) {
   .sidebar {

@@ -20,16 +20,20 @@ export async function getProviders(): Promise<Provider[]> {
 ========================================= */
 
 export async function createProvider(
-  provider: Omit<Provider, "id" | "created_at">
+  provider: Pick<Provider, "name"> & Partial<Pick<Provider, "phone" | "email">>
 ): Promise<Provider> {
+  const payload = {
+    name: String(provider.name).trim(),
+    phone: provider.phone?.trim() || null,
+    email: provider.email?.trim() || null,
+  };
   const { data, error } = await supabase
     .from("providers")
-    .insert(provider)
-    .select()
+    .insert(payload)
+    .select("id, name, phone, email, created_at")
     .single();
-
   if (error) throw error;
-  return data;
+  return data as Provider;
 }
 
 /* =========================================
@@ -38,13 +42,12 @@ export async function createProvider(
 
 export async function updateProvider(
   id: string,
-  updates: Partial<Omit<Provider, "id" | "created_at">>
+  updates: Partial<Pick<Provider, "name" | "phone" | "email">>
 ): Promise<void> {
   const { error } = await supabase
     .from("providers")
     .update(updates)
     .eq("id", id);
-
   if (error) throw error;
 }
 

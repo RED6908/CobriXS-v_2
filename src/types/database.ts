@@ -31,28 +31,27 @@ export interface InventoryMovement {
 }
 
 /* =========================
-   PROVEEDORES
+   PROVEEDORES (match your DB: id, name, phone, email, created_at)
 ========================= */
 export interface Provider {
   id: string;
   name: string;
-  email: string | null;
   phone: string | null;
-  rfc: string | null;
-  contact: string | null;
-  balance: number;
+  email: string | null;
   created_at: string;
 }
 
 /* =========================
-   PAGOS A PROVEEDORES
+   PAGOS A PROVEEDORES (match your DB: payment_date, method, reference, notes)
 ========================= */
 export interface ProviderPayment {
   id: string;
   provider_id: string;
-  cash_session_id: string | null;
   amount: number;
-  description: string | null;
+  payment_date: string;
+  method: string | null;
+  reference: string | null;
+  notes: string | null;
   created_at: string;
   providers?: Pick<Provider, "name">;
 }

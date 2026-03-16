@@ -1,36 +1,25 @@
 import { supabase } from "../lib/supabase";
 import type { ProviderPayment } from "../types/database";
-import { getActiveSession } from "./cashSession.service";
 
 export async function registerPayment(
   providerId: string,
   amount: number,
-  description: string
+  opts: { method?: string; reference?: string; notes?: string } = {}
 ): Promise<ProviderPayment> {
-  const session = await getActiveSession();
-
-  const { data: payment, error: paymentError } = await supabase
+  const { data: payment, error } = await supabase
     .from("provider_payments")
     .insert({
       provider_id: providerId,
-      cash_session_id: session?.id ?? null,
       amount,
-      description,
+      payment_date: new Date().toISOString(),
+      method: opts.method ?? null,
+      reference: opts.reference ?? null,
+      notes: opts.notes ?? null,
     })
-    .select()
+    .select("id, provider_id, amount, payment_date, method, reference, notes, created_at")
     .single();
-  if (paymentError) throw paymentError;
-
-  if (session) {
-    await supabase.from("cash_movements").insert({
-      cash_session_id: session.id,
-      type: "salida",
-      amount,
-      description: `Pago a proveedor: ${description}`,
-    });
-  }
-
-  return payment;
+  if (error) throw error;
+  return payment as ProviderPayment;
 }
 
 export async function getPayments(
@@ -38,12 +27,10 @@ export async function getPayments(
 ): Promise<ProviderPayment[]> {
   let query = supabase
     .from("provider_payments")
-    .select("*, providers(name)")
+    .select("id, provider_id, amount, payment_date, method, reference, notes, created_at, providers(name)")
     .order("created_at", { ascending: false });
-
   if (providerId) query = query.eq("provider_id", providerId);
-
   const { data, error } = await query;
   if (error) throw error;
-  return data;
+  return (data ?? []) as ProviderPayment[];
 }
