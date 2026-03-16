@@ -9,6 +9,12 @@ export interface Product {
   code: string | null;
   category: string | null;
   stock: number;
+  min_stock?: number | null;
+  max_stock?: number | null;
+  location?: string | null;
+  unit?: string | null;
+  product_type?: string | null;
+  provider_id?: string | null;
   purchase_price: number | null;
   sale_price: number | null;
   created_at: string;
