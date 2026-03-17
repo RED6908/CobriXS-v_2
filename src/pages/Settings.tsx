@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useSettings } from "../context/SettingsContext";
 import type { FC } from "react";
 
@@ -8,7 +9,13 @@ const Settings: FC = () => {
   const { language, fontSize, setLanguage, setFontSize, t } = useSettings();
 
   return (
-    <div className="container-fluid">
+    <div className="container-fluid settings-page">
+      <nav aria-label="breadcrumb" className="mb-2">
+        <ol className="breadcrumb mb-0">
+          <li className="breadcrumb-item"><Link to="/">Inicio</Link></li>
+          <li className="breadcrumb-item active" aria-current="page">{t.settings}</li>
+        </ol>
+      </nav>
       {/* Header */}
       <div className="mb-4">
         <h3 className="fw-bold mb-1">{t.settings}</h3>
@@ -70,16 +77,9 @@ const Settings: FC = () => {
                         fontSize === size
                           ? "btn-primary"
                           : "btn-outline-secondary"
-                      }`}
+                      } font-size-preview-${size}`}
                       onClick={() => setFontSize(size)}
-                      style={{
-                        fontSize:
-                          size === "sm"
-                            ? "0.85rem"
-                            : size === "lg"
-                            ? "1.1rem"
-                            : "1rem",
-                      }}
+                      {...(fontSize === size && { "aria-pressed": "true" })}
                     >
                       {size === "sm"
                         ? t.fontSmall
@@ -90,7 +90,7 @@ const Settings: FC = () => {
                   ))}
                 </div>
 
-                <div className="mt-3 p-3 bg-light rounded">
+                <div className={`mt-3 p-3 bg-light rounded settings-preview font-size-preview-${fontSize}`}>
                   <p className="mb-0">
                     {language === "es"
                       ? "Vista previa del texto con el tamaño seleccionado."
@@ -115,8 +115,8 @@ const Settings: FC = () => {
 
               <div className="d-flex align-items-center gap-3 mb-3">
                 <div
-                  className="rounded-circle bg-primary d-flex align-items-center justify-content-center"
-                  style={{ width: 56, height: 56 }}
+                  className="rounded-circle bg-primary d-flex align-items-center justify-content-center settings-about-icon"
+                  aria-hidden
                 >
                   <i className="bi bi-shop text-white fs-4" />
                 </div>

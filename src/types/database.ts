@@ -36,11 +36,8 @@ export interface InventoryMovement {
 export interface Provider {
   id: string;
   name: string;
-  email: string | null;
   phone: string | null;
-  rfc: string | null;
-  contact: string | null;
-  balance: number;
+  email: string | null;
   created_at: string;
 }
 
@@ -50,9 +47,11 @@ export interface Provider {
 export interface ProviderPayment {
   id: string;
   provider_id: string;
-  cash_session_id: string | null;
   amount: number;
-  description: string | null;
+  payment_date: string;
+  method: string;
+  reference: string | null;
+  notes: string | null;
   created_at: string;
   providers?: Pick<Provider, "name">;
 }

@@ -35,3 +35,20 @@
     left: 0;
   }
 }
+
+/* ===== Settings: font size preview (buttons and preview box) ===== */
+.font-size-preview-sm { font-size: 0.85rem !important; }
+.font-size-preview-md { font-size: 1rem !important; }
+.font-size-preview-lg { font-size: 1.1rem !important; }
+
+.settings-page .settings-preview.font-size-preview-sm { font-size: 0.85rem; }
+.settings-page .settings-preview.font-size-preview-md { font-size: 1rem; }
+.settings-page .settings-preview.font-size-preview-lg { font-size: 1.1rem; }
+
+/* ===== Auth pages (Login / Register) ===== */
+.login-page .login-card { width: 400px; }
+.register-page .register-card { max-width: 400px; }
+.link-clickable { cursor: pointer; }
+
+/* ===== Settings: about block ===== */
+.settings-page .settings-about-icon { width: 56px; height: 56px; }
