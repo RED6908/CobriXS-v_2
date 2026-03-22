@@ -4,15 +4,19 @@ import {
   createProvider,
   updateProvider,
 } from "../services/providers.service";
+import { useAuth } from "../hooks/useAuth";
 import {
   getPayments,
   registerPayment,
 } from "../services/providerPayments.service";
 import type { Provider, ProviderPayment } from "../types/database";
+import PageHeader from "../components/PageHeader";
 
 type Tab = "proveedores" | "historial";
 
 export default function SupplierPayments() {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === "admin";
   const [providers, setProviders] = useState<Provider[]>([]);
   const [payments, setPayments] = useState<ProviderPayment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -167,27 +171,16 @@ export default function SupplierPayments() {
   }
 
   return (
-    <div className="supplier-payments-page">
-      <nav className="text-muted small mb-2" aria-label="breadcrumb">
-        <ol className="breadcrumb mb-0">
-          <li className="breadcrumb-item active" aria-current="page">
-            <i className="bi bi-receipt me-1" />
-            Pagos Proveedores
-          </li>
-          <li className="breadcrumb-item">
-            <i className="bi bi-display me-1" />
-            Escritorio
-          </li>
-        </ol>
-      </nav>
+    <div className="container-fluid supplier-payments-page">
+      <PageHeader
+        title="Pagos a Proveedores"
+        subtitle={isAdmin ? "Registrar y dar seguimiento a pagos" : "Consulta de proveedores y pagos"}
+        breadcrumb={[{ label: "Inicio", to: "/" }, { label: "Proveedores" }]}
+      />
 
-      <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-4">
-        <div>
-          <h3 className="fw-bold mb-1">Pagos a Proveedores</h3>
-          <p className="text-muted mb-0">
-            Registrar, descontar y dar seguimiento a pagos
-          </p>
-        </div>
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3 mb-4">
+        <div />
+        {isAdmin && (
         <div className="d-flex gap-2 flex-wrap">
           <button
             type="button"
@@ -214,6 +207,7 @@ export default function SupplierPayments() {
             Registrar Pago
           </button>
         </div>
+        )}
       </div>
 
       {error && (
@@ -223,69 +217,74 @@ export default function SupplierPayments() {
         </div>
       )}
 
-      <div className="row g-3 mb-4">
+      <div className="row g-4 mb-4">
         <div className="col-12 col-md-4">
-          <div className="card h-100 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center gap-2 text-muted mb-1">
-                <i className="bi bi-currency-dollar fs-5" />
-                Total pagado
+          <div className="stat-card h-100">
+            <div className="d-flex justify-content-between align-items-start">
+              <div>
+                <div className="text-secondary small mb-1">Total pagado</div>
+                <h4 className="fw-bold mb-0">${totalPaymentsAmount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</h4>
               </div>
-              <h3 className="fw-bold mb-0">${totalPaymentsAmount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</h3>
+              <div className="stat-icon success">
+                <i className="bi bi-currency-dollar" />
+              </div>
             </div>
           </div>
         </div>
         <div className="col-12 col-md-4">
-          <div className="card h-100 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center gap-2 text-muted mb-1">
-                <i className="bi bi-buildings fs-5" />
-                Proveedores
+          <div className="stat-card h-100">
+            <div className="d-flex justify-content-between align-items-start">
+              <div>
+                <div className="text-secondary small mb-1">Proveedores</div>
+                <h4 className="fw-bold mb-0">{providers.length}</h4>
               </div>
-              <h3 className="fw-bold mb-0">{providers.length}</h3>
+              <div className="stat-icon primary">
+                <i className="bi bi-buildings" />
+              </div>
             </div>
           </div>
         </div>
         <div className="col-12 col-md-4">
-          <div className="card h-100 shadow-sm">
-            <div className="card-body">
-              <div className="d-flex align-items-center gap-2 text-muted mb-1">
-                <i className="bi bi-clock-history text-primary fs-5" />
-                Pagos registrados
+          <div className="stat-card h-100">
+            <div className="d-flex justify-content-between align-items-start">
+              <div>
+                <div className="text-secondary small mb-1">Pagos registrados</div>
+                <h4 className="fw-bold mb-0">{payments.length}</h4>
               </div>
-              <h3 className="fw-bold mb-0">{payments.length}</h3>
+              <div className="stat-icon secondary">
+                <i className="bi bi-clock-history" />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="d-flex gap-2 mb-3">
-        <button
-          type="button"
-          className={`btn ${activeTab === "proveedores" ? "btn-light fw-semibold" : "btn-outline-secondary"}`}
-          onClick={() => setActiveTab("proveedores")}
-        >
-          Proveedores
-        </button>
-        <button
-          type="button"
-          className={`btn ${activeTab === "historial" ? "btn-light fw-semibold" : "btn-outline-secondary"}`}
-          onClick={() => setActiveTab("historial")}
-        >
-          Historial de Pagos
-        </button>
-      </div>
+      <ul className="nav nav-tabs mb-4">
+        <li className="nav-item">
+          <button
+            className={`nav-link ${activeTab === "proveedores" ? "active" : ""}`}
+            onClick={() => setActiveTab("proveedores")}
+          >
+            Proveedores
+          </button>
+        </li>
+        <li className="nav-item">
+          <button
+            className={`nav-link ${activeTab === "historial" ? "active" : ""}`}
+            onClick={() => setActiveTab("historial")}
+          >
+            Historial de Pagos
+          </button>
+        </li>
+      </ul>
 
       {activeTab === "proveedores" && (
-        <div className="card shadow-sm">
-          <div className="card-body">
-            <h5 className="fw-semibold mb-3">
-              <i className="bi bi-list-ul me-1" />
-              Lista de Proveedores
-            </h5>
-            <div className="table-responsive">
-              <table className="table align-middle mb-0">
-                <thead className="table-light">
+        <div className="cobrixs-card">
+          <div className="cobrixs-card-header">Lista de Proveedores</div>
+          <div className="cobrixs-card-body p-0">
+          <div className="table-responsive">
+            <table className="table table-professional align-middle mb-0">
+              <thead>
                   <tr>
                     <th>Proveedor</th>
                     <th>Teléfono</th>
@@ -310,6 +309,7 @@ export default function SupplierPayments() {
                         </td>
                         <td>{p.phone ?? "-"}</td>
                         <td className="text-end">
+                          {isAdmin && (
                           <button
                             type="button"
                             className="btn btn-outline-secondary btn-sm"
@@ -317,6 +317,7 @@ export default function SupplierPayments() {
                           >
                             Editar
                           </button>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -329,15 +330,12 @@ export default function SupplierPayments() {
       )}
 
       {activeTab === "historial" && (
-        <div className="card shadow-sm">
-          <div className="card-body">
-            <h5 className="fw-semibold mb-3">
-              <i className="bi bi-clock-history me-1" />
-              Historial de Pagos
-            </h5>
-            <div className="table-responsive">
-              <table className="table align-middle mb-0">
-                <thead className="table-light">
+        <div className="cobrixs-card">
+          <div className="cobrixs-card-header">Historial de Pagos</div>
+          <div className="cobrixs-card-body p-0">
+          <div className="table-responsive">
+            <table className="table table-professional align-middle mb-0">
+              <thead>
                   <tr>
                     <th>Fecha</th>
                     <th>Proveedor</th>

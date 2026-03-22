@@ -1,14 +1,13 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { useNavigate } from "react-router-dom";
 
-const Register: React.FC = () => {
+export default function Register() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState("vendedor");
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -82,13 +81,13 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="d-flex align-items-center justify-content-center vh-100 bg-primary">
-      <div className="card shadow-lg p-4 w-100" style={{ maxWidth: "400px" }}>
-        <h1 className="text-center text-primary fw-bold mb-2">Registro</h1>
-
-        <p className="text-center text-muted mb-4">
-          Crear cuenta en CobriXS
-        </p>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-logo">
+          <i className="bi bi-person-plus" />
+        </div>
+        <h1>Registro</h1>
+        <p className="auth-subtitle">Crear cuenta en CobriXS</p>
 
         <form onSubmit={handleRegister}>
 
@@ -99,7 +98,7 @@ const Register: React.FC = () => {
 
             <input
               type="email"
-              className="form-control"
+              className="form-control form-control-lg"
               placeholder="usuario@cobrixs.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -114,7 +113,7 @@ const Register: React.FC = () => {
 
             <input
               type="password"
-              className="form-control"
+              className="form-control form-control-lg"
               placeholder="Mínimo 6 caracteres"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -129,27 +128,12 @@ const Register: React.FC = () => {
 
             <input
               type="password"
-              className="form-control"
+              className="form-control form-control-lg"
               placeholder="Repita su contraseña"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
-          </div>
-
-          {/* ROLE */}
-
-          <div className="mb-3">
-            <label className="form-label">Tipo de usuario</label>
-
-            <select
-              className="form-control"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-            >
-              <option value="vendedor">Vendedor</option>
-              <option value="admin">Administrador</option>
-            </select>
           </div>
 
           {/* ERROR */}
@@ -172,7 +156,7 @@ const Register: React.FC = () => {
 
           <button
             type="submit"
-            className="btn btn-primary w-100"
+            className="btn btn-primary btn-lg w-100"
             disabled={loading}
           >
             {loading ? (
@@ -187,21 +171,13 @@ const Register: React.FC = () => {
 
         </form>
 
-        <div className="mt-3 text-center">
-          <small>
+        <div className="mt-4 text-center">
+          <small className="text-muted">
             ¿Ya tienes cuenta?{" "}
-            <span
-              onClick={() => navigate("/login")}
-              className="text-primary fw-semibold"
-              style={{ cursor: "pointer" }}
-            >
-              Inicia sesión
-            </span>
+            <Link to="/login" className="fw-semibold">Inicia sesión</Link>
           </small>
         </div>
       </div>
     </div>
   );
-};
-
-export default Register;
+}

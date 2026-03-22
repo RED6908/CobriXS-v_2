@@ -5,23 +5,23 @@ import type { InventoryMovement } from "../types/database";
    INVENTORY MOVEMENTS
 ========================================= */
 
-export async function getMovements(): Promise<InventoryMovement[]> {
-  const { data, error } = await supabase
+export async function getMovements(storeId?: string | null): Promise<InventoryMovement[]> {
+  let query = supabase
     .from("inventory_movements")
     .select("*, products(name, code)")
     .order("created_at", { ascending: false });
-
+  if (storeId) query = query.eq("store_id", storeId);
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }
 
 export async function createMovement(
-  movement: Omit<InventoryMovement, "id" | "created_at" | "products">
+  movement: Omit<InventoryMovement, "id" | "created_at" | "products"> & { store_id?: string | null }
 ) {
-  const { error } = await supabase
-    .from("inventory_movements")
-    .insert(movement);
-
+  const { store_id, ...rest } = movement;
+  const payload = store_id != null ? { ...rest, store_id } : rest;
+  const { error } = await supabase.from("inventory_movements").insert(payload);
   if (error) throw error;
 }
 
@@ -45,10 +45,12 @@ export async function updateStock(
    DASHBOARD STATS
 ========================================= */
 
-export async function getStockStats() {
-  const { data: products, error } = await supabase
+export async function getStockStats(storeId?: string | null) {
+  let query = supabase
     .from("products")
     .select("id, name, stock, category, purchase_price");
+  if (storeId) query = query.eq("store_id", storeId);
+  const { data: products, error } = await query;
 
   if (error) throw error;
 

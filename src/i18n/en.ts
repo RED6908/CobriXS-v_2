@@ -7,6 +7,7 @@ export const en: Translations = {
   inventory: "Inventory",
   pos: "Cash Register",
   suppliers: "Suppliers",
+  stores: "Stores",
   reports: "Reports",
   settings: "Settings",
   logout: "Sign Out",

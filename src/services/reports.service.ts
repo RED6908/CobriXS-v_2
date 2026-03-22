@@ -1,23 +1,27 @@
 import { supabase } from "../lib/supabase";
 
-export async function getSalesReport(from: string, to: string) {
-  const { data, error } = await supabase
+export async function getSalesReport(from: string, to: string, storeId?: string | null) {
+  let query = supabase
     .from("sales")
     .select("*, sale_items(quantity, price, products(name))")
     .gte("created_at", from)
     .lte("created_at", to)
     .order("created_at", { ascending: false });
+  if (storeId) query = query.eq("store_id", storeId);
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 }
 
-export async function getSalesByDay(from: string, to: string) {
-  const { data, error } = await supabase
+export async function getSalesByDay(from: string, to: string, storeId?: string | null) {
+  let query = supabase
     .from("sales")
     .select("created_at, total")
     .gte("created_at", from)
     .lte("created_at", to)
     .order("created_at");
+  if (storeId) query = query.eq("store_id", storeId);
+  const { data, error } = await query;
   if (error) throw error;
 
   const byDay: Record<string, number> = {};

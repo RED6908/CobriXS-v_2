@@ -1,10 +1,22 @@
 export type UserRole = "admin" | "vendedor";
 
 /* =========================
+   TIENDAS
+========================= */
+export interface Store {
+  id: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  created_at: string;
+}
+
+/* =========================
    PRODUCTOS
 ========================= */
 export interface Product {
   id: string;
+  store_id: string | null;
   name: string;
   code: string | null;
   category: string | null;
@@ -22,10 +34,28 @@ export type MovementType = "entrada" | "salida";
 export interface InventoryMovement {
   id: string;
   product_id: string;
+  store_id: string | null;
   type: MovementType;
   quantity: number;
   description: string | null;
   user_id: string | null;
+  created_at: string;
+  products?: Pick<Product, "name" | "code">;
+}
+
+export type InventorySuggestionStatus = "pendiente" | "aprobado" | "rechazado";
+
+export interface InventorySuggestion {
+  id: string;
+  product_id: string;
+  store_id: string | null;
+  type: MovementType;
+  quantity: number;
+  description: string | null;
+  suggested_by: string;
+  status: InventorySuggestionStatus;
+  resolved_by: string | null;
+  resolved_at: string | null;
   created_at: string;
   products?: Pick<Product, "name" | "code">;
 }
@@ -35,6 +65,7 @@ export interface InventoryMovement {
 ========================= */
 export interface Provider {
   id: string;
+  store_id: string | null;
   name: string;
   phone: string | null;
   email: string | null;
@@ -74,6 +105,7 @@ export type CashSessionStatus = "open" | "closed";
 
 export interface CashSession {
   id: string;
+  store_id: string | null;
   user_id: string | null;
   opening_amount: number;
   closing_amount: number | null;
@@ -88,14 +120,17 @@ export interface CashSession {
 export type PaymentMethod =
   | "efectivo"
   | "tarjeta"
-  | "transferencia";
+  | "transferencia"
+  | "mixto";
 
 export interface Sale {
   id: string;
+  store_id: string | null;
   user_id: string | null;
   cash_session_id: string | null;
   total: number;
   payment_method: PaymentMethod;
+  payment_breakdown?: Record<string, number>;
   created_at: string;
 }
 
