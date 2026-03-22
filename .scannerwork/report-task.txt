@@ -1,0 +1,7 @@
+organization=geocarri-sudo
+projectKey=cobrixs-local
+serverUrl=https://sonarcloud.io
+serverVersion=8.0.0.83581
+dashboardUrl=https://sonarcloud.io/dashboard?id=cobrixs-local
+ceTaskId=AZ0XXxeqIvfhAAzbblNM
+ceTaskUrl=https://sonarcloud.io/api/ce/task?id=AZ0XXxeqIvfhAAzbblNM
