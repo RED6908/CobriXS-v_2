@@ -1,4 +1,4 @@
-name: TESTS JEST
+name: TESTS -JEST-
 
 on:
   push:
