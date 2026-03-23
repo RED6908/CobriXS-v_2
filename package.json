@@ -4,12 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "test": "echo \"No tests\"",
-    "preview": "vite preview"
-  },
+  "dev": "vite",
+  "build": "tsc -b && vite build",
+  "lint": "eslint .",
+  "preview": "vite preview",
+
+  "test": "jest",
+  "test:coverage": "jest --coverage"
+},
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
     "bootstrap": "^5.3.8",
