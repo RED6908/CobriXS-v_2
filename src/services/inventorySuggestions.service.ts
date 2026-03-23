@@ -49,14 +49,23 @@ export async function approveSuggestion(
   quantity: number,
   description: string | null
 ) {
-  const movement = {
+  /*const movement = {
     product_id: productId,
     type,
     quantity,
     description: description ?? null,
     user_id: resolvedBy,
     ...(storeId != null ? { store_id: storeId } : {}),
-  };
+  };*/ //marca error para el paso 12, fecha 22/03/26
+
+  const movement = {
+  product_id: productId,
+  type,
+  quantity,
+  description: description ?? null,
+  user_id: resolvedBy,
+  store_id: storeId ?? null,
+};
   await createMovement(movement);
 
   const { error } = await supabase

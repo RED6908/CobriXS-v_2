@@ -60,9 +60,12 @@ export default function Register() {
 
     const { error: profileError } = await supabase
       .from("user_profiles")
-      .insert({
+      /*.insert({
         user_id: user.id,
-        role: role,
+        role: role,*///salia error cuando hice las puebas fecha 22/03/26
+        .insert({
+         user_id: user.id,
+        role: "user",
       });
 
     if (profileError) {
