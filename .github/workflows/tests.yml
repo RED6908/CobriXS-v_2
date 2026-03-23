@@ -1,4 +1,4 @@
-name: CobriXS CI/CD
+name: TESTS JEST
 
 on:
   push:
