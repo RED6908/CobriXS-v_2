@@ -1,0 +1,38 @@
+name: ZAP Security Test
+
+on:
+  push:
+    branches: [ main, feature/panel-de-cobro ]
+  pull_request:
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4 
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Start app
+        run: |
+          npm run dev &
+          sleep 10
+
+      - name: Run OWASP ZAP Scan
+        run: |
+          docker run -t owasp/zap2docker-stable zap-baseline.py \
+          -t http://localhost:5173 \
+          -r zap-report.html || true 
+          # Agregamos || true para que aunque encuentre alertas, el proceso no se detenga
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v4 
+        with:
+          name: zap-report
+          path: zap-report.html

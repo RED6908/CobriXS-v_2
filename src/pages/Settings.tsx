@@ -1,6 +1,6 @@
-import { Link } from "react-router-dom";
 import { useSettings } from "../context/SettingsContext";
 import type { FC } from "react";
+import PageHeader from "../components/PageHeader";
 
 type Language = "es" | "en";
 type FontSize = "sm" | "md" | "lg";
@@ -10,27 +10,20 @@ const Settings: FC = () => {
 
   return (
     <div className="container-fluid settings-page">
-      <nav aria-label="breadcrumb" className="mb-2">
-        <ol className="breadcrumb mb-0">
-          <li className="breadcrumb-item"><Link to="/">Inicio</Link></li>
-          <li className="breadcrumb-item active" aria-current="page">{t.settings}</li>
-        </ol>
-      </nav>
-      {/* Header */}
-      <div className="mb-4">
-        <h3 className="fw-bold mb-1">{t.settings}</h3>
-        <p className="text-muted mb-0">
-          {language === "es"
+      <PageHeader
+        title={t.settings}
+        subtitle={
+          language === "es"
             ? "Personaliza la experiencia del sistema"
-            : "Customize the system experience"}
-        </p>
-      </div>
-
+            : "Customize the system experience"
+        }
+        breadcrumb={[{ label: "Inicio", to: "/" }, { label: t.settings }]}
+      />
       <div className="row g-4">
         {/* Accessibility */}
         <div className="col-12 col-md-6">
-          <div className="card h-100 shadow-sm">
-            <div className="card-body">
+          <div className="cobrixs-card h-100">
+            <div className="cobrixs-card-body">
               <h5 className="fw-semibold mb-4">
                 <i className="bi bi-universal-access me-2" />
                 {t.accessibility}
@@ -102,10 +95,9 @@ const Settings: FC = () => {
           </div>
         </div>
 
-        {/* ===== About ===== */}
         <div className="col-12 col-md-6">
-          <div className="card h-100 shadow-sm">
-            <div className="card-body">
+          <div className="cobrixs-card h-100">
+            <div className="cobrixs-card-body">
               <h5 className="fw-semibold mb-4">
                 <i className="bi bi-info-circle me-2" />
                 {language === "es"

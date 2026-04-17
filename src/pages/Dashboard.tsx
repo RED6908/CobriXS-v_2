@@ -1,96 +1,150 @@
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useProducts } from "../hooks/useProducts";
+import { getTodaySalesTotal, getSales } from "../services/sales.service";
+import { getUsers } from "../services/users.service";
+import PageHeader from "../components/PageHeader";
 
 export default function Dashboard() {
   const { products } = useProducts();
+  const [todaySales, setTodaySales] = useState(0);
+  const [recentSales, setRecentSales] = useState<Array<{ id: string; total: number; created_at: string; payment_method?: string }>>([]);
+  const [usersCount, setUsersCount] = useState(0);
 
-  // Total stock
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const from = today.toISOString();
+    const to = new Date().toISOString();
+
+    getTodaySalesTotal().then(setTodaySales).catch(() => setTodaySales(0));
+    getSales(from, to).then((s) => setRecentSales(s.slice(0, 10))).catch(() => setRecentSales([]));
+    getUsers().then((u) => setUsersCount(u.length)).catch(() => setUsersCount(0));
+  }, []);
+
   const totalStock = products.reduce((acc, p) => acc + p.stock, 0);
-
-  // Productos con stock bajo (<10)
   const lowStock = products.filter((p) => p.stock < 10);
 
-  return (
-    <>
-      {/* Alert */}
-      <div className="alert alert-success d-flex align-items-center mb-4">
-        <i className="bi bi-display fs-4 me-3"></i>
-        <div>
-          <strong>Modo Escritorio:</strong>
-          <div className="small">
-            Acceso completo a todos los módulos, incluyendo el Panel de Cobro.
-          </div>
-        </div>
-      </div>
+  const stats = [
+    { title: "Productos", value: products.length, icon: "bi-box", color: "primary" },
+    { title: "Stock total", value: totalStock, icon: "bi-archive", color: "primary" },
+    { title: "Stock bajo", value: lowStock.length, icon: "bi-exclamation-triangle", color: lowStock.length > 0 ? "warning" : "success" },
+    { title: "Ventas hoy", value: `$${todaySales.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`, icon: "bi-currency-dollar", color: "success" },
+    { title: "Usuarios", value: usersCount, icon: "bi-people", color: "primary" },
+  ];
 
-      {/* Metrics */}
+  return (
+    <div className="container-fluid">
+      <PageHeader
+        title="Resumen"
+        subtitle="Vista general de tu negocio"
+        breadcrumb={[{ label: "Inicio", to: "/" }]}
+      />
+
       <div className="row g-4 mb-4">
-        {[
-          ["Productos en sistema", products.length, "box"],
-          ["Stock total", totalStock, "archive"],
-          ["Productos con stock bajo", lowStock.length, "exclamation-triangle"],
-          ["Usuarios activos", 1, "people"], // puedes conectar luego a users
-        ].map(([title, value, icon]) => (
-          <div className="col-md-3" key={title as string}>
-            <div className="card shadow-sm h-100">
-              <div className="card-body d-flex justify-content-between">
+        {stats.map((s) => (
+          <div key={s.title} className="col-12 col-sm-6 col-xl">
+            <div className="stat-card h-100">
+              <div className="d-flex justify-content-between align-items-start">
                 <div>
-                  <div className="text-muted small">{title}</div>
-                  <h4 className="fw-bold">{value}</h4>
+                  <div className="text-secondary small mb-1">{s.title}</div>
+                  <h4 className="fw-bold mb-0">{s.value}</h4>
                 </div>
-                <i className={`bi bi-${icon} fs-2 text-primary`} />
+                <div className={`stat-icon ${s.color}`}>
+                  <i className={`bi ${s.icon}`} />
+                </div>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Lists */}
       <div className="row g-4">
-        {/* Ventas recientes (puedes conectar después a tabla sales) */}
         <div className="col-lg-7">
-          <div className="card shadow-sm h-100">
-            <div className="card-header fw-semibold">
-              <i className="bi bi-cart me-2" />
-              Ventas recientes
+          <div className="cobrixs-card h-100">
+            <div className="cobrixs-card-header d-flex justify-content-between align-items-center">
+              <span><i className="bi bi-cart me-2" />Ventas recientes</span>
+              <Link to="/pos" className="btn btn-sm btn-outline-primary">
+                Ir al POS
+              </Link>
             </div>
-            <ul className="list-group list-group-flush">
-              <li className="list-group-item text-muted">
-                Próximamente conectado a ventas reales
-              </li>
-            </ul>
+            <div className="cobrixs-card-body">
+              {recentSales.length > 0 ? (
+                <ul className="list-group list-group-flush">
+                  {recentSales.map((sale) => (
+                    <li
+                      key={sale.id}
+                      className="list-group-item d-flex justify-content-between align-items-center px-0"
+                    >
+                      <div>
+                        <span className="text-muted small">
+                          {new Date(sale.created_at).toLocaleTimeString("es-MX", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                        {sale.payment_method && (
+                          <span className="badge bg-light text-dark ms-2 text-capitalize">
+                            {sale.payment_method}
+                          </span>
+                        )}
+                      </div>
+                      <strong>${(sale.total ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</strong>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-center py-5 text-muted">
+                  <i className="bi bi-receipt display-4 opacity-50" />
+                  <p className="mt-2 mb-0">No hay ventas hoy</p>
+                  <p className="small">Total hoy: <strong>${todaySales.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</strong></p>
+                </div>
+              )}
+              {recentSales.length > 0 && (
+                <p className="text-muted small mb-0 mt-2">
+                  Total hoy: <strong>${todaySales.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</strong>
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Stock bajo dinámico */}
         <div className="col-lg-5">
-          <div className="card border-warning shadow-sm h-100">
-            <div className="card-header fw-semibold text-warning">
+          <div className="cobrixs-card h-100 border-warning">
+            <div className="cobrixs-card-header text-warning">
               <i className="bi bi-exclamation-triangle me-2" />
               Stock bajo
             </div>
-
             <ul className="list-group list-group-flush">
               {lowStock.length === 0 ? (
-                <li className="list-group-item text-muted">
-                  Todo en orden 👍
+                <li className="list-group-item text-success">
+                  <i className="bi bi-check-circle me-2" />
+                  Todo en orden
                 </li>
               ) : (
-                lowStock.map((product) => (
+                lowStock.slice(0, 5).map((p) => (
                   <li
-                    key={product.id}
-                    className="list-group-item d-flex justify-content-between"
+                    key={p.id}
+                    className="list-group-item d-flex justify-content-between align-items-center"
                   >
-                    {product.name}
-                    <span className="badge bg-danger">
-                      {product.stock} restantes
-                    </span>
+                    <Link to="/inventario" className="text-decoration-none text-dark">
+                      {p.name}
+                    </Link>
+                    <span className="badge bg-warning text-dark">{p.stock}</span>
                   </li>
                 ))
+              )}
+              {lowStock.length > 5 && (
+                <li className="list-group-item">
+                  <Link to="/inventario" className="small">
+                    Ver los {lowStock.length} productos con stock bajo →
+                  </Link>
+                </li>
               )}
             </ul>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
