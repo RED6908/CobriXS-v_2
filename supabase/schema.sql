@@ -41,6 +41,16 @@ create table if not exists public.products (
 );
 
 -- =============================================
+-- TABLA: categories
+-- =============================================
+create table if not exists public.categories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT categories_pkey PRIMARY KEY (id)
+);
+
+-- =============================================
 -- TABLA: inventory_movements
 -- Trazabilidad de entradas y salidas de stock
 -- =============================================
