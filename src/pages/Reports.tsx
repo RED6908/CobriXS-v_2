@@ -11,8 +11,8 @@ import {
 } from "chart.js";
 import { Line, Pie } from "react-chartjs-2";
 import type { FC } from "react";
-import { useStore } from "../context/StoreContext";
 import { getSalesByDay, getSalesReport } from "../services/reports.service";
+import { useStore } from "../context/StoreContext";
 import { downloadReportCSV } from "../utils/downloadReport";
 import PageHeader from "../components/PageHeader";
 
@@ -26,7 +26,7 @@ ChartJS.register(
   Legend
 );
 
-function getDefaultRange() {
+function getDefaultRange(): { from: string; to: string; fromDate: string; toDate: string } {
   const to = new Date();
   const from = new Date(to);
   from.setDate(from.getDate() - 6);
@@ -47,7 +47,7 @@ interface StatCardProps {
   value: string;
   change?: string;
   icon: string;
-  color: string;
+  positive?: boolean;
 }
 
 export default function Reports() {
@@ -155,7 +155,7 @@ export default function Reports() {
 
   if (loading && reportData.length === 0)
     return (
-      <div className="container-fluid">
+      <div className="container-fluid reports-page">
         <PageHeader title="Reportes" breadcrumb={[{ label: "Inicio", to: "/" }, { label: "Reportes" }]} />
         <div className="text-center py-5">
           <div className="spinner-border text-primary" />
@@ -165,14 +165,14 @@ export default function Reports() {
 
   if (error)
     return (
-      <div className="container-fluid">
+      <div className="container-fluid reports-page">
         <PageHeader title="Reportes" breadcrumb={[{ label: "Inicio", to: "/" }, { label: "Reportes" }]} />
         <div className="alert alert-danger">{error}</div>
       </div>
     );
 
   return (
-    <div className="container-fluid">
+    <div className="container-fluid reports-page">
       <PageHeader
         title="Reportes"
         subtitle="Análisis de ventas y desempeño"
@@ -218,51 +218,62 @@ export default function Reports() {
         <StatCard
           title="Ventas Totales"
           value={`$${stats.totalSales.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`}
+          change="En el período seleccionado"
           icon="bi-currency-dollar"
-          color="success"
+          positive
         />
         <StatCard
           title="Transacciones"
           value={String(stats.count)}
+          change="En el período seleccionado"
           icon="bi-cart"
-          color="primary"
+          positive
         />
         <StatCard
           title="Ticket Promedio"
           value={`$${stats.avgTicket.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`}
+          change="Por venta"
           icon="bi-graph-up"
-          color="primary"
+          positive
         />
         <StatCard
           title="Productos Vendidos"
           value={String(stats.productsSold)}
+          change="Unidades en el período"
           icon="bi-box"
-          color="primary"
         />
       </div>
 
+      {/* ===== Tabs ===== */}
+      <div className="d-flex gap-2 mb-4">
+        <button type="button" className="btn btn-light fw-semibold">
+          Dashboard
+        </button>
+        <button type="button" className="btn btn-outline-secondary">
+          Ventas
+        </button>
+        <button type="button" className="btn btn-outline-secondary">
+          Productos
+        </button>
+        <button type="button" className="btn btn-outline-secondary">
+          Vendedores
+        </button>
+      </div>
+
+      {/* ===== Charts ===== */}
       <div className="row g-4">
         <div className="col-12 col-lg-7">
-          <div className="cobrixs-card h-100">
-            <div className="cobrixs-card-header">
-              Tendencia de Ventas {sortedDays.length ? `(${sortedDays.length} días)` : ""}
-            </div>
-            <div className="cobrixs-card-body">
-              {sortedDays.length > 0 ? (
-                <Line data={salesTrendData} />
-              ) : (
-                <p className="text-muted mb-0">No hay ventas en el período seleccionado.</p>
-              )}
+          <div className="card h-100 shadow-sm">
+            <div className="card-body">
+              <h5 className="fw-semibold mb-3">Tendencia de ventas (período)</h5>
+              <Line data={salesTrendData} />
             </div>
           </div>
         </div>
         <div className="col-12 col-lg-5">
-          <div className="cobrixs-card h-100">
-            <div className="cobrixs-card-header">Ventas por Categoría</div>
-            <div className="cobrixs-card-body">
-              <p className="text-muted small mb-3">
-                Próximamente con datos reales por categoría.
-              </p>
+          <div className="card h-100 shadow-sm">
+            <div className="card-body">
+              <h5 className="fw-semibold mb-3">Ventas por categoría</h5>
               <Pie data={categoryData} />
             </div>
           </div>
@@ -272,18 +283,25 @@ export default function Reports() {
   );
 }
 
-const StatCard: FC<StatCardProps> = ({ title, value, icon, color }) => (
-  <div className="col-12 col-sm-6 col-xl-3">
-    <div className="stat-card h-100">
-      <div className="d-flex justify-content-between align-items-start">
-        <div>
-          <div className="text-secondary small mb-1">{title}</div>
-          <h4 className="fw-bold mb-0">{value}</h4>
-        </div>
-        <div className={`stat-icon ${color}`}>
-          <i className={`bi ${icon}`} />
+/* ===== Reusable Stat Card ===== */
+const StatCard: FC<StatCardProps> = ({ title, value, change, icon, positive }) => {
+  const changeClass =
+    positive === false ? "text-danger" : positive === true ? "text-success" : "text-muted";
+
+  return (
+    <div className="col-12 col-md-6 col-xl-3">
+      <div className="card h-100 shadow-sm">
+        <div className="card-body d-flex justify-content-between align-items-start">
+          <div>
+            <p className="text-muted mb-1">{title}</p>
+            <h4 className="fw-bold mb-1">{value}</h4>
+            {change != null && change !== "" && (
+              <small className={changeClass}>{change}</small>
+            )}
+          </div>
+          <i className={`bi ${icon} fs-2 text-muted`} />
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
