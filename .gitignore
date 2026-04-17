@@ -23,5 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# Entorno
+# Entorno (credenciales; no subir a GitHub)
 .env
+.env.*
+!.env.example
