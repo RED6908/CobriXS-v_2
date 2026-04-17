@@ -1,5 +1,6 @@
 import { useSettings } from "../context/SettingsContext";
 import type { FC } from "react";
+import PageHeader from "../components/PageHeader";
 
 type Language = "es" | "en";
 type FontSize = "sm" | "md" | "lg";
@@ -8,22 +9,21 @@ const Settings: FC = () => {
   const { language, fontSize, setLanguage, setFontSize, t } = useSettings();
 
   return (
-    <div className="container-fluid">
-      {/* Header */}
-      <div className="mb-4">
-        <h3 className="fw-bold mb-1">{t.settings}</h3>
-        <p className="text-muted mb-0">
-          {language === "es"
+    <div className="container-fluid settings-page">
+      <PageHeader
+        title={t.settings}
+        subtitle={
+          language === "es"
             ? "Personaliza la experiencia del sistema"
-            : "Customize the system experience"}
-        </p>
-      </div>
-
+            : "Customize the system experience"
+        }
+        breadcrumb={[{ label: "Inicio", to: "/" }, { label: t.settings }]}
+      />
       <div className="row g-4">
         {/* Accessibility */}
         <div className="col-12 col-md-6">
-          <div className="card h-100 shadow-sm">
-            <div className="card-body">
+          <div className="cobrixs-card h-100">
+            <div className="cobrixs-card-body">
               <h5 className="fw-semibold mb-4">
                 <i className="bi bi-universal-access me-2" />
                 {t.accessibility}
@@ -70,16 +70,9 @@ const Settings: FC = () => {
                         fontSize === size
                           ? "btn-primary"
                           : "btn-outline-secondary"
-                      }`}
+                      } font-size-preview-${size}`}
                       onClick={() => setFontSize(size)}
-                      style={{
-                        fontSize:
-                          size === "sm"
-                            ? "0.85rem"
-                            : size === "lg"
-                            ? "1.1rem"
-                            : "1rem",
-                      }}
+                      {...(fontSize === size && { "aria-pressed": "true" })}
                     >
                       {size === "sm"
                         ? t.fontSmall
@@ -90,7 +83,7 @@ const Settings: FC = () => {
                   ))}
                 </div>
 
-                <div className="mt-3 p-3 bg-light rounded">
+                <div className={`mt-3 p-3 bg-light rounded settings-preview font-size-preview-${fontSize}`}>
                   <p className="mb-0">
                     {language === "es"
                       ? "Vista previa del texto con el tamaño seleccionado."
@@ -102,10 +95,9 @@ const Settings: FC = () => {
           </div>
         </div>
 
-        {/* ===== About ===== */}
         <div className="col-12 col-md-6">
-          <div className="card h-100 shadow-sm">
-            <div className="card-body">
+          <div className="cobrixs-card h-100">
+            <div className="cobrixs-card-body">
               <h5 className="fw-semibold mb-4">
                 <i className="bi bi-info-circle me-2" />
                 {language === "es"
@@ -115,8 +107,8 @@ const Settings: FC = () => {
 
               <div className="d-flex align-items-center gap-3 mb-3">
                 <div
-                  className="rounded-circle bg-primary d-flex align-items-center justify-content-center"
-                  style={{ width: 56, height: 56 }}
+                  className="rounded-circle bg-primary d-flex align-items-center justify-content-center settings-about-icon"
+                  aria-hidden
                 >
                   <i className="bi bi-shop text-white fs-4" />
                 </div>

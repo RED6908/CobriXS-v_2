@@ -3,13 +3,16 @@ import type { CashSession } from "../types/database";
 
 export async function openSession(openingAmount: number): Promise<CashSession> {
   const { data: { user } } = await supabase.auth.getUser();
+  const insertData: Record<string, unknown> = {
+    opening_amount: openingAmount,
+    status: "open",
+  };
+  if (user?.id) {
+    insertData.opened_by = user.id;
+  }
   const { data, error } = await supabase
     .from("cash_sessions")
-    .insert({
-      user_id: user?.id ?? null,
-      opening_amount: openingAmount,
-      status: "open",
-    })
+    .insert(insertData)
     .select()
     .single();
   if (error) throw error;
@@ -46,18 +49,17 @@ export async function getActiveSession(): Promise<CashSession | null> {
 export async function getSessionSummary(sessionId: string) {
   const { data: sales, error: salesError } = await supabase
     .from("sales")
-    .select("total, payment_method")
+    .select("total")
     .eq("cash_session_id", sessionId);
   if (salesError) throw salesError;
 
-  const { data: payments, error: paymentsError } = await supabase
+  const { data: providerPayments, error: paymentsError } = await supabase
     .from("provider_payments")
     .select("amount")
     .eq("cash_session_id", sessionId);
-  if (paymentsError) throw paymentsError;
+  const totalPayments = paymentsError ? 0 : (providerPayments ?? []).reduce((s, p) => s + (p.amount ?? 0), 0);
 
-  const totalSales = (sales ?? []).reduce((s, v) => s + v.total, 0);
-  const totalPayments = (payments ?? []).reduce((s, p) => s + p.amount, 0);
+  const totalSales = (sales ?? []).reduce((s, v) => s + (v.total ?? 0), 0);
 
   const { data: session } = await supabase
     .from("cash_sessions")
@@ -81,5 +83,5 @@ export async function getSessions(): Promise<CashSession[]> {
     .select("*")
     .order("opened_at", { ascending: false });
   if (error) throw error;
-  return data;
+  return data ?? [];
 }
