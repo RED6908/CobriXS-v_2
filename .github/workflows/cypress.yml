@@ -28,11 +28,9 @@ jobs:
       - name: Construir proyecto (TypeScript)
         run: npm run build
 
-      - name: Levantar servidor
-        run: npm run preview &
-
-      - name: Esperar servidor
-        run: npx wait-on http://localhost:4173
-
-      - name: Ejecutar Cypress
-        run: npx cypress run
+      - name: Preview, esperar y Cypress
+        run: |
+          set -e
+          npm run preview &
+          npx wait-on http://127.0.0.1:4173 --timeout 120000
+          npx cypress run

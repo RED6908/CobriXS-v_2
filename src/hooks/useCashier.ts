@@ -76,7 +76,7 @@ export function useCashier() {
     setError(null);
     try {
       // 1. Buscar por código exacto
-      let product = await searchByCode(code.trim());
+      const product = await searchByCode(code.trim());
       if (product) {
         dispatch({ type: "ADD", product });
         setSearchQuery("");

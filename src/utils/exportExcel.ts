@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 
-export function exportToExcel(data: any[]) {
+export function exportToExcel(data: Record<string, unknown>[]) {
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
 

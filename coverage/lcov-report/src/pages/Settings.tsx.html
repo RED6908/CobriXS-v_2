@@ -32,7 +32,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/32</span>
+                <span class='fraction'>0/30</span>
             </div>
         
             
@@ -227,10 +227,7 @@
 <a name='L162'></a><a href='#L162'>162</a>
 <a name='L163'></a><a href='#L163'>163</a>
 <a name='L164'></a><a href='#L164'>164</a>
-<a name='L165'></a><a href='#L165'>165</a>
-<a name='L166'></a><a href='#L166'>166</a>
-<a name='L167'></a><a href='#L167'>167</a>
-<a name='L168'></a><a href='#L168'>168</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L165'></a><a href='#L165'>165</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -265,28 +262,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -307,6 +282,25 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -408,10 +402,14 @@ const Settings: FC = <span class="cstat-no" title="statement not covered" ><span
   const { language, fontSize, setLanguage, setFontSize, t } = <span class="cstat-no" title="statement not covered" >useSettings();</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  return (</span>
-    &lt;div className="container-fluid"&gt;
+    &lt;div className="container-fluid settings-page"&gt;
       &lt;PageHeader
         title={t.settings}
-        subtitle={language === "es" ? "Personaliza la experiencia" : "Customize experience"}
+        subtitle={
+          language === "es"
+            ? "Personaliza la experiencia del sistema"
+            : "Customize the system experience"
+        }
         breadcrumb={[{ label: "Inicio", to: "/" }, { label: t.settings }]}
       /&gt;
       &lt;div className="row g-4"&gt;
@@ -465,16 +463,9 @@ const Settings: FC = <span class="cstat-no" title="statement not covered" ><span
                         fontSize === size
                           ? "btn-primary"
                           : "btn-outline-secondary"
-                      }`}
+                      } font-size-preview-${size}`}
                       onClick={<span class="fstat-no" title="function not covered" >() =</span>&gt; <span class="cstat-no" title="statement not covered" >setFontSize(size)}</span>
-                      style={{
-                        fontSize:
-                          size === "sm"
-                            ? "0.85rem"
-                            : size === "lg"
-                            ? "1.1rem"
-                            : "1rem",
-                      }}
+                      {...(fontSize === size &amp;&amp; { "aria-pressed": "true" })}
                     &gt;
                       {size === "sm"
                         ? t.fontSmall
@@ -485,7 +476,7 @@ const Settings: FC = <span class="cstat-no" title="statement not covered" ><span
                   ))}
                 &lt;/div&gt;
 &nbsp;
-                &lt;div className="mt-3 p-3 bg-light rounded"&gt;
+                &lt;div className={`mt-3 p-3 bg-light rounded settings-preview font-size-preview-${fontSize}`}&gt;
                   &lt;p className="mb-0"&gt;
                     {language === "es"
                       ? "Vista previa del texto con el tamaño seleccionado."
@@ -509,8 +500,8 @@ const Settings: FC = <span class="cstat-no" title="statement not covered" ><span
 &nbsp;
               &lt;div className="d-flex align-items-center gap-3 mb-3"&gt;
                 &lt;div
-                  className="rounded-circle bg-primary d-flex align-items-center justify-content-center"
-                  style={{ width: 56, height: 56 }}
+                  className="rounded-circle bg-primary d-flex align-items-center justify-content-center settings-about-icon"
+                  aria-hidden
                 &gt;
                   &lt;i className="bi bi-shop text-white fs-4" /&gt;
                 &lt;/div&gt;
@@ -571,7 +562,7 @@ const Settings: FC = <span class="cstat-no" title="statement not covered" ><span
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-23T04:45:05.901Z
+                at 2026-04-17T05:57:04.377Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

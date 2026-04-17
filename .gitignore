@@ -25,3 +25,9 @@ dist-ssr
 
 # Entorno
 .env
+
+# Sonar / análisis local (no versionar; rompe ESLint y CI si se indexan)
+.scannerwork/
+
+# Cobertura de tests
+coverage/

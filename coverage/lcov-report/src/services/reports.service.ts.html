@@ -25,28 +25,28 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/40</span>
+                <span class='fraction'>0/46</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/28</span>
+                <span class='fraction'>0/41</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/6</span>
+                <span class='fraction'>0/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/32</span>
+                <span class='fraction'>0/39</span>
             </div>
         
             
@@ -145,7 +145,18 @@
 <a name='L80'></a><a href='#L80'>80</a>
 <a name='L81'></a><a href='#L81'>81</a>
 <a name='L82'></a><a href='#L82'>82</a>
-<a name='L83'></a><a href='#L83'>83</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -193,17 +204,28 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -274,28 +296,39 @@
     .select("total, payment_method")
     .eq("cash_session_id", sessionId);
 &nbsp;
-  const { data: payments } = <span class="cstat-no" title="statement not covered" >await supabase</span>
+  let totalPayments = <span class="cstat-no" title="statement not covered" >0;</span>
+  const payments: { amount: number; providers?: { name: string } }[] = <span class="cstat-no" title="statement not covered" >[];</span>
+  const { data: paymentsData, error: paymentsError } = <span class="cstat-no" title="statement not covered" >await supabase</span>
     .from("provider_payments")
     .select("amount, providers(name)")
     .eq("cash_session_id", sessionId);
+<span class="cstat-no" title="statement not covered" >  if (!paymentsError &amp;&amp; paymentsData &amp;&amp; Array.isArray(paymentsData)) {</span>
+<span class="cstat-no" title="statement not covered" >    for (const row of paymentsData as { amount: number; providers?: { name: string } | { name: string }[] }[]) {</span>
+      const prov = <span class="cstat-no" title="statement not covered" >row.providers;</span>
+<span class="cstat-no" title="statement not covered" >      payments.push({</span>
+        amount: row.amount,
+        providers: Array.isArray(prov) ? prov[0] : prov,
+      });
+<span class="cstat-no" title="statement not covered" >      totalPayments += row.amount ?? 0;</span>
+    }
+  }
+  // If provider_payments has no cash_session_id column, paymentsError will be set; ignore and use 0
 &nbsp;
-  const totalSales = <span class="cstat-no" title="statement not covered" >(sales ?? []).reduce(<span class="fstat-no" title="function not covered" >(s</span>, v) =&gt; <span class="cstat-no" title="statement not covered" >s + v.total,</span> 0);</span>
-  const totalPayments = <span class="cstat-no" title="statement not covered" >(payments ?? []).reduce(<span class="fstat-no" title="function not covered" >(s</span>, p) =&gt; <span class="cstat-no" title="statement not covered" >s + p.amount,</span> 0);</span>
-&nbsp;
+  const totalSales = <span class="cstat-no" title="statement not covered" >(sales ?? []).reduce(<span class="fstat-no" title="function not covered" >(s</span>, v) =&gt; <span class="cstat-no" title="statement not covered" >s + (v.total ?? 0),</span> 0);</span>
   const byMethod: Record&lt;string, number&gt; = <span class="cstat-no" title="statement not covered" >{};</span>
 <span class="cstat-no" title="statement not covered" >  for (const sale of sales ?? []) {</span>
-<span class="cstat-no" title="statement not covered" >    byMethod[sale.payment_method] =</span>
-      (byMethod[sale.payment_method] ?? 0) + sale.total;
+    const method = <span class="cstat-no" title="statement not covered" >sale.payment_method ?? "efectivo";</span>
+<span class="cstat-no" title="statement not covered" >    byMethod[method] = (byMethod[method] ?? 0) + (sale.total ?? 0);</span>
   }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  return {</span>
     session,
     totalSales,
     totalPayments,
-    expectedCash: session.opening_amount + totalSales - totalPayments,
+    expectedCash: (session?.opening_amount ?? 0) + totalSales - totalPayments,
     salesCount: (sales ?? []).length,
     byMethod,
-    payments: payments ?? [],
+    payments,
   };
 }
 &nbsp;
@@ -316,7 +349,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-23T04:45:05.901Z
+                at 2026-04-17T05:57:04.377Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
