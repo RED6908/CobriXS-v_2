@@ -1,23 +1,84 @@
-/* ===== Layout base ===== */
+/* ===== CobriXS POS - Sistema de diseño ===== */
+
+/* Layout principal */
 .app-layout {
   display: flex;
   height: 100vh;
   overflow: hidden;
 }
 
-/* ===== Sidebar ===== */
-.sidebar {
+/* Sidebar profesional - tema claro */
+.cobrixs-sidebar {
   width: 260px;
   min-width: 260px;
-  background: #fff;
-  border-right: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
 }
 
-/* ===== Main ===== */
-.main-content {
-  flex-grow: 1;
+.cobrixs-sidebar .sidebar-brand {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cobrixs-sidebar .sidebar-brand-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.cobrixs-sidebar .nav-link {
+  color: #475569;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.cobrixs-sidebar .nav-link:hover {
+  color: #1e293b;
+  background: #f1f5f9;
+}
+
+.cobrixs-sidebar .nav-link.active {
+  color: var(--cobrixs-primary, #1e3a5f);
+  background: rgba(30, 58, 95, 0.1);
+  border-left: 3px solid var(--cobrixs-primary, #1e3a5f);
+}
+
+.cobrixs-sidebar .sidebar-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #e2e8f0;
+  margin-top: auto;
+}
+
+/* Contenido principal */
+.cobrixs-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.cobrixs-topbar {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.75rem 1.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.cobrixs-content {
+  flex: 1;
   overflow-y: auto;
-  background: #f8f9fa;
+  padding: 1.5rem;
 }
 
 /* ===== Inventory page ===== */
@@ -58,6 +119,87 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Page header estándar */
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.25rem 0;
+}
+
+.page-header .page-subtitle {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Cards profesionales */
+.cobrixs-card {
+  background: white;
+  border-radius: var(--cobrixs-card-radius);
+  box-shadow: var(--cobrixs-shadow);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.cobrixs-card-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.cobrixs-card-body {
+  padding: 1.25rem;
+}
+
+/* Stat cards */
+.stat-card {
+  background: white;
+  border-radius: var(--cobrixs-card-radius);
+  padding: 1.25rem;
+  box-shadow: var(--cobrixs-shadow);
+  border: 1px solid #e2e8f0;
+  transition: box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  box-shadow: var(--cobrixs-shadow-lg);
+}
+
+.stat-card .stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.stat-card .stat-icon.primary { background: #dbeafe; color: #2563eb; }
+.stat-card .stat-icon.secondary { background: #f1f5f9; color: #64748b; }
+.stat-card .stat-icon.success { background: #dcfce7; color: #16a34a; }
+.stat-card .stat-icon.warning { background: #fef3c7; color: #d97706; }
+.stat-card .stat-icon.danger { background: #fee2e2; color: #dc2626; }
+
+/* Modales overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .inventory-page .nav-tab {
   border: none;
   border-radius: 0.5rem;
@@ -98,9 +240,124 @@
   font-size: 1.25rem;
 }
 
-/* ===== Mobile ===== */
+.modal-overlay .modal-dialog {
+  max-width: 500px;
+  width: 90%;
+}
+
+.modal-overlay .modal-content {
+  border-radius: var(--cobrixs-card-radius);
+  border: none;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Formularios */
+.form-control:focus,
+.form-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* Tablas */
+.table-professional {
+  --bs-table-hover-bg: #f8fafc;
+}
+
+.table-professional thead th {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table-professional tbody td {
+  padding: 0.875rem 1rem;
+  vertical-align: middle;
+}
+
+/* Botones de acción */
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+/* Login / Auth */
+.auth-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.auth-card {
+  background: white;
+  border-radius: 16px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.auth-card .auth-logo {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  margin: 0 auto 1rem;
+}
+
+.auth-card h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.auth-card .auth-subtitle {
+  color: #64748b;
+  text-align: center;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Cashier */
+.cashier-page .cashier-modal-overlay,
+.cashier-page .modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 1050;
+}
+.cashier-page .min-h-300 { min-height: 300px; }
+
+/* Supplier Payments */
+.supplier-payments-page .supplier-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 1050;
+}
+
 @media (max-width: 768px) {
-  .sidebar {
+  .cobrixs-sidebar {
     position: fixed;
     left: -260px;
     top: 0;
@@ -109,7 +366,24 @@
     transition: left 0.3s ease;
   }
 
-  .sidebar.open {
+  .cobrixs-sidebar.open {
     left: 0;
   }
 }
+
+/* ===== Settings: font size preview (buttons and preview box) ===== */
+.font-size-preview-sm { font-size: 0.85rem !important; }
+.font-size-preview-md { font-size: 1rem !important; }
+.font-size-preview-lg { font-size: 1.1rem !important; }
+
+.settings-page .settings-preview.font-size-preview-sm { font-size: 0.85rem; }
+.settings-page .settings-preview.font-size-preview-md { font-size: 1rem; }
+.settings-page .settings-preview.font-size-preview-lg { font-size: 1.1rem; }
+
+/* ===== Auth pages (Login / Register) ===== */
+.login-page .login-card { width: 400px; }
+.register-page .register-card { max-width: 400px; }
+.link-clickable { cursor: pointer; }
+
+/* ===== Settings: about block ===== */
+.settings-page .settings-about-icon { width: 56px; height: 56px; }

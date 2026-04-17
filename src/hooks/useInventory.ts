@@ -7,8 +7,10 @@ import {
   subscribeToProducts,
 } from "../services/inventory.service";
 import { getProducts } from "../services/products.service";
+import { useStore } from "../context/StoreContext";
 
 export function useInventory() {
+  const { currentStoreId } = useStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +19,10 @@ export function useInventory() {
   const fetchAll = useCallback(async () => {
     try {
       setLoading(true);
-      const [prods, movs] = await Promise.all([getProducts(), getMovements()]);
+      const [prods, movs] = await Promise.all([
+        getProducts(currentStoreId),
+        getMovements(currentStoreId),
+      ]);
       setProducts(prods);
       setMovements(movs);
     } catch (e) {
@@ -25,19 +30,19 @@ export function useInventory() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentStoreId]);
 
   useEffect(() => {
     fetchAll();
 
     const channel = subscribeToProducts(() => {
-      getProducts().then(setProducts).catch(console.error);
+      getProducts(currentStoreId).then(setProducts).catch(console.error);
     });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchAll]);
+  }, [fetchAll, currentStoreId]);
 
   const addMovement = useCallback(
     async (
@@ -47,8 +52,10 @@ export function useInventory() {
       description: string
     ) => {
       const { data: { user } } = await supabase.auth.getUser();
+      const product = products.find((p) => p.id === productId);
       await createMovement({
         product_id: productId,
+        store_id: product?.store_id ?? currentStoreId ?? null,
         type,
         quantity,
         description,
@@ -56,7 +63,7 @@ export function useInventory() {
       });
       await fetchAll();
     },
-    [fetchAll]
+    [fetchAll, products, currentStoreId]
   );
 
   const defaultMinStock = 10;

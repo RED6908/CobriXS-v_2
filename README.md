@@ -1,3 +1,61 @@
+# CobriXS-v_2
+
+Sistema desarrollado con React, TypeScript, Vite y Supabase.
+
+El proyecto incluye pruebas automatizadas con Jest y reporte de cobertura.
+
+## Instalación
+
+Clonar el repositorio:
+
+git clone https://github.com/TU-USUARIO/CobriXS-v_2.git
+
+Entrar al proyecto:
+
+cd CobriXS-v_2
+
+Instalar dependencias:
+
+npm install
+
+## Ejecutar el proyecto
+
+npm run dev
+
+## Ejecutar pruebas
+
+Pruebas unitarias:
+
+npm test
+
+Generar reporte de coverage:
+
+npm run test:coverage
+
+## Reporte de pruebas
+
+El reporte se genera en la carpeta:
+
+coverage/
+
+Abrir:
+
+coverage/lcov-report/index.html
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Información del template de Vite
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

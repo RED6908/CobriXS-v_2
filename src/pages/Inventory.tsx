@@ -1,9 +1,20 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useInventory } from "../hooks/useInventory";
-import type { Product } from "../types/database";
+import { useToast } from "../context/ToastContext";
+import { useAuth } from "../hooks/useAuth";
+import { useStore } from "../context/StoreContext";
+import {
+  getSuggestions,
+  createSuggestion,
+  approveSuggestion,
+  rejectSuggestion,
+} from "../services/inventorySuggestions.service";
+import { supabase } from "../lib/supabase";
+import PageHeader from "../components/PageHeader";
+import type { Product, InventorySuggestion } from "../types/database";
 
-type Tab = "productos" | "movimientos" | "alertas" | "analisis";
+type Tab = "productos" | "movimientos" | "alertas" | "sugerencias" | "analisis";
 
 const CATEGORY_ICONS: Record<string, string> = {
   Todos: "bi-funnel",
@@ -23,13 +34,21 @@ const LOW_STOCK_THRESHOLD_DEFAULT = 10;
 const CRITICAL_STOCK = 2;
 
 export default function Inventory() {
-  const { products, movements, loading, error, stats, addMovement } =
+  const { profile } = useAuth();
+  const { currentStoreId } = useStore();
+  const { products, movements, loading, error, stats, addMovement, refetch } =
     useInventory();
+  const { success: toastSuccess, error: toastError } = useToast();
+  const isAdmin = profile?.role === "admin";
+
+  const [suggestions, setSuggestions] = useState<InventorySuggestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState<Tab>("productos");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("Todos");
   const [showModal, setShowModal] = useState(false);
+  const [showSuggestionModal, setShowSuggestionModal] = useState(false);
   const [form, setForm] = useState({
     product_id: "",
     type: "entrada" as "entrada" | "salida",
@@ -38,6 +57,29 @@ export default function Inventory() {
   });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const loadSuggestions = useCallback(async () => {
+    setSuggestionsLoading(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const data = await getSuggestions(
+        currentStoreId,
+        isAdmin ? "pendiente" : undefined,
+        !isAdmin && user ? user.id : undefined
+      );
+      setSuggestions(data);
+    } catch {
+      setSuggestions([]);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  }, [currentStoreId, isAdmin]);
+
+  useEffect(() => {
+    if (activeTab === "sugerencias") void loadSuggestions();
+  }, [activeTab, loadSuggestions]);
 
   const filteredProducts = useMemo(() => {
     let list = products.filter(
@@ -101,18 +143,101 @@ export default function Inventory() {
         form.description
       );
       setShowModal(false);
+      toastSuccess("Movimiento registrado correctamente");
       setForm({
         product_id: "",
         type: "entrada",
         quantity: 1,
         description: "",
       });
+      await refetch();
     } catch {
       setFormError("Error al guardar el movimiento");
     } finally {
       setSaving(false);
     }
-  }, [form, addMovement]);
+  }, [form, addMovement, toastSuccess, refetch]);
+
+  const handleSaveSuggestion = useCallback(async () => {
+    if (!form.product_id) {
+      setFormError("Selecciona un producto");
+      return;
+    }
+    if (form.quantity <= 0) {
+      setFormError("Cantidad inválida");
+      return;
+    }
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setFormError("Debes iniciar sesión");
+      return;
+    }
+    setSaving(true);
+    setFormError(null);
+    try {
+      const product = products.find((p) => p.id === form.product_id);
+      await createSuggestion(
+        form.product_id,
+        product?.store_id ?? currentStoreId ?? null,
+        form.type,
+        form.quantity,
+        form.description,
+        user.id
+      );
+      setShowSuggestionModal(false);
+      setForm({ product_id: "", type: "entrada", quantity: 1, description: "" });
+      toastSuccess("Sugerencia enviada. El administrador la revisará.");
+      void loadSuggestions();
+    } catch {
+      setFormError("Error al enviar sugerencia");
+      toastError("Error al enviar sugerencia");
+    } finally {
+      setSaving(false);
+    }
+  }, [form, products, currentStoreId, toastSuccess, toastError, loadSuggestions]);
+
+  const handleApprove = useCallback(
+    async (s: InventorySuggestion) => {
+      setSaving(true);
+      try {
+        await approveSuggestion(
+          s.id,
+          (await supabase.auth.getUser()).data.user!.id,
+          s.product_id,
+          s.store_id,
+          s.type,
+          s.quantity,
+          s.description
+        );
+        toastSuccess("Sugerencia aprobada y movimiento aplicado");
+        await refetch();
+        void loadSuggestions();
+      } catch {
+        toastError("Error al aprobar");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [toastSuccess, toastError, refetch, loadSuggestions]
+  );
+
+  const handleReject = useCallback(
+    async (s: InventorySuggestion) => {
+      setSaving(true);
+      try {
+        await rejectSuggestion(s.id, (await supabase.auth.getUser()).data.user!.id);
+        toastSuccess("Sugerencia rechazada");
+        void loadSuggestions();
+      } catch {
+        toastError("Error al rechazar");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [toastSuccess, toastError, loadSuggestions]
+  );
 
   if (loading) {
     return (
@@ -138,122 +263,81 @@ export default function Inventory() {
     );
   }
 
-  const categoryKeys = ["Todos", ...Object.keys(categories).filter((k) => k !== "Todos")];
+  const categoryKeys = [
+    "Todos",
+    ...Object.keys(categories).filter((k) => k !== "Todos"),
+  ];
+
+  const categoryCount = Object.keys(categories).filter((k) => k !== "Todos").length;
 
   return (
-    <div className="inventory-page">
-      {/* Breadcrumb */}
-      <nav className="text-muted small mb-2" aria-label="breadcrumb">
-        <ol className="breadcrumb mb-0">
-          <li className="breadcrumb-item">
-            <span>Inventario</span>
-          </li>
-          <li className="breadcrumb-item active" aria-current="page">
-            Escritorio
-          </li>
-        </ol>
-      </nav>
+    <div className="container-fluid inventory-page">
+      <PageHeader
+        title="Gestión de Inventario"
+        subtitle="Control completo de productos, stock y movimientos"
+        breadcrumb={[{ label: "Inicio", to: "/" }, { label: "Inventario" }]}
+      />
 
-      {/* Header */}
-      <div className="mb-4">
-        <h3 className="fw-bold mb-1">Gestión de Inventario</h3>
-        <p className="text-muted mb-0">
-          Control completo de productos, stock y movimientos
-        </p>
+      <div className="row g-4 mb-4">
+        <StatCard
+          title="Productos Totales"
+          value={stats.total}
+          subtitle={`En ${categoryCount || 1} categorías`}
+          icon="bi-box"
+          color="primary"
+        />
+        <StatCard
+          title="Alertas de Stock"
+          value={stats.lowStock.length}
+          subtitle={
+            criticalCount > 0
+              ? `${criticalCount} críticos · stock bajo`
+              : "Stock bajo"
+          }
+          icon="bi-exclamation-triangle"
+          color="warning"
+        />
+        <StatCard
+          title="Valor Total"
+          value={`$${stats.totalValue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`}
+          subtitle="Inventario actual"
+          icon="bi-graph-up"
+          color="success"
+        />
+        <StatCard
+          title="Movimientos"
+          value={stats.movementsCount}
+          subtitle="Registros totales"
+          icon="bi-activity"
+          color="secondary"
+        />
       </div>
 
-      {/* KPI Cards */}
-      <div className="row g-3 mb-4">
-        <div className="col-12 col-sm-6 col-xl-3">
-          <div className="card h-100 shadow-sm">
-            <div className="card-body d-flex justify-content-between align-items-start">
-              <div>
-                <p className="text-muted small mb-1">Productos Totales</p>
-                <h4 className="fw-bold mb-0">{stats.total}</h4>
-                <small className="text-muted">
-                  En {Object.keys(categories).filter((k) => k !== "Todos").length || 1} categorías
-                </small>
-              </div>
-              <div className="stat-card-icon bg-primary bg-opacity-10 text-primary">
-                <i className="bi bi-box fs-5" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-12 col-sm-6 col-xl-3">
-          <div className="card h-100 shadow-sm">
-            <div className="card-body d-flex justify-content-between align-items-start">
-              <div>
-                <p className="text-muted small mb-1">Alertas de Stock</p>
-                <h4 className="fw-bold mb-0">{stats.lowStock.length}</h4>
-                <small className="text-muted">
-                  {criticalCount > 0 ? `${criticalCount} críticos` : "Stock bajo"}
-                </small>
-              </div>
-              <div className="stat-card-icon bg-danger bg-opacity-10 text-danger">
-                <i className="bi bi-exclamation-triangle fs-5" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-12 col-sm-6 col-xl-3">
-          <div className="card h-100 shadow-sm">
-            <div className="card-body d-flex justify-content-between align-items-start">
-              <div>
-                <p className="text-muted small mb-1">Valor Total</p>
-                <h4 className="fw-bold mb-0">
-                  ${stats.totalValue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                </h4>
-                <small className="text-muted">Inventario actual</small>
-              </div>
-              <div className="stat-card-icon bg-success bg-opacity-10 text-success">
-                <i className="bi bi-graph-up fs-5" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-12 col-sm-6 col-xl-3">
-          <div className="card h-100 shadow-sm">
-            <div className="card-body d-flex justify-content-between align-items-start">
-              <div>
-                <p className="text-muted small mb-1">Movimientos</p>
-                <h4 className="fw-bold mb-0">{stats.movementsCount}</h4>
-                <small className="text-muted">Registros totales</small>
-              </div>
-              <div className="stat-card-icon bg-secondary bg-opacity-10 text-secondary">
-                <i className="bi bi-activity fs-5" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="d-flex gap-2 mb-4 flex-wrap">
+      <ul className="nav nav-tabs mb-4 flex-wrap">
         {(
           [
-            { id: "productos", label: "Productos", icon: "bi-box" },
-            { id: "movimientos", label: "Movimientos", icon: "bi-arrow-left-right" },
-            { id: "alertas", label: `Alertas (${stats.lowStock.length})`, icon: "bi-exclamation-triangle" },
-            { id: "analisis", label: "Análisis", icon: "bi-bar-chart" },
+            ["productos", "Productos"],
+            ["movimientos", "Movimientos"],
+            ["alertas", `Alertas (${stats.lowStock.length})`],
+            [
+              "sugerencias",
+              isAdmin ? "Sugerencias pendientes" : "Mis sugerencias",
+            ],
+            ["analisis", "Análisis"],
           ] as const
-        ).map(({ id, label, icon }) => (
-          <button
-            key={id}
-            type="button"
-            className={`nav-tab d-inline-flex align-items-center gap-2 ${
-              activeTab === id ? "active" : ""
-            }`}
-            onClick={() => setActiveTab(id)}
-            aria-pressed={activeTab === id}
-          >
-            <i className={`bi ${icon}`} />
-            {label}
-          </button>
+        ).map(([tab, label]) => (
+          <li key={tab} className="nav-item">
+            <button
+              type="button"
+              className={`nav-link ${activeTab === tab ? "active" : ""}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {label}
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
 
-      {/* Search + Actions (only when Productos tab) */}
       {activeTab === "productos" && (
         <div className="d-flex flex-column flex-md-row gap-3 mb-4">
           <div className="input-group flex-grow-1">
@@ -269,24 +353,52 @@ export default function Inventory() {
               aria-label="Buscar producto por nombre o código"
             />
           </div>
-          <div className="d-flex gap-2">
+          <div className="d-flex flex-wrap gap-2">
             <Link to="/productos" className="btn btn-primary">
               <i className="bi bi-box me-1" />
               Nuevo Producto
             </Link>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setShowModal(true)}
-            >
-              <i className="bi bi-plus-circle me-1" />
-              Nuevo Movimiento
-            </button>
+            {isAdmin ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setForm({
+                    product_id: "",
+                    type: "entrada",
+                    quantity: 1,
+                    description: "",
+                  });
+                  setFormError(null);
+                  setShowModal(true);
+                }}
+              >
+                <i className="bi bi-plus-circle me-1" />
+                Nuevo Movimiento
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-outline-primary"
+                onClick={() => {
+                  setForm({
+                    product_id: "",
+                    type: "entrada",
+                    quantity: 1,
+                    description: "",
+                  });
+                  setFormError(null);
+                  setShowSuggestionModal(true);
+                }}
+              >
+                <i className="bi bi-send me-1" />
+                Sugerir Ajuste
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      {/* Category filter cards (Productos tab) */}
       {activeTab === "productos" && (
         <div className="row g-3 mb-4">
           {categoryKeys.map((cat) => {
@@ -329,9 +441,8 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Productos tab: table */}
       {activeTab === "productos" && (
-        <div className="card shadow-sm">
+        <div className="card shadow-sm mb-4">
           <div className="card-body">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h6 className="fw-semibold mb-0">
@@ -359,46 +470,54 @@ export default function Inventory() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map((p) => {
-                    const low = isLowStock(p);
-                    const min = p.min_stock ?? "-";
-                    return (
-                      <tr key={p.id}>
-                        <td className="fw-semibold">{p.name}</td>
-                        <td className="text-muted small">{p.code ?? "-"}</td>
-                        <td>{p.category ?? "Sin categoría"}</td>
-                        <td>{p.stock} pza</td>
-                        <td>{min === "-" ? "-" : `${min} pza`}</td>
-                        <td>
-                          {p.sale_price != null
-                            ? `$${p.sale_price}`
-                            : "-"}
-                        </td>
-                        <td className="text-muted small">
-                          {p.location ?? "-"}
-                        </td>
-                        <td>
-                          <span
-                            className={`badge rounded-pill ${
-                              low ? "bg-primary" : "bg-secondary"
-                            }`}
-                          >
-                            {low ? "Bajo" : "Normal"}
-                          </span>
-                        </td>
-                        <td className="text-end">
-                          <Link
-                            to={`/productos`}
-                            className="btn btn-sm btn-light"
-                            title="Ver producto"
-                            aria-label="Ver producto"
-                          >
-                            <i className="bi bi-eye" />
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {filteredProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="text-center text-muted py-4">
+                        {search || categoryFilter !== "Todos"
+                          ? "No hay productos que coincidan con los filtros."
+                          : "No hay productos en el inventario."}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredProducts.map((p) => {
+                      const low = isLowStock(p);
+                      const min = p.min_stock ?? "-";
+                      return (
+                        <tr key={p.id}>
+                          <td className="fw-semibold">{p.name}</td>
+                          <td className="text-muted small">{p.code ?? "-"}</td>
+                          <td>{p.category ?? "Sin categoría"}</td>
+                          <td>{p.stock} pza</td>
+                          <td>{min === "-" ? "-" : `${min} pza`}</td>
+                          <td>
+                            {p.sale_price != null ? `$${p.sale_price}` : "-"}
+                          </td>
+                          <td className="text-muted small">
+                            {p.location ?? "-"}
+                          </td>
+                          <td>
+                            <span
+                              className={`badge rounded-pill ${
+                                low ? "bg-primary" : "bg-secondary"
+                              }`}
+                            >
+                              {low ? "Bajo" : "Normal"}
+                            </span>
+                          </td>
+                          <td className="text-end">
+                            <Link
+                              to="/productos"
+                              className="btn btn-sm btn-light"
+                              title="Ver producto"
+                              aria-label="Ver producto"
+                            >
+                              <i className="bi bi-eye" />
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -406,7 +525,6 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Movimientos tab */}
       {activeTab === "movimientos" && (
         <div className="card shadow-sm">
           <div className="card-body">
@@ -415,14 +533,25 @@ export default function Inventory() {
                 <i className="bi bi-arrow-left-right me-2" />
                 Historial de movimientos
               </h6>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => setShowModal(true)}
-              >
-                <i className="bi bi-plus-circle me-1" />
-                Nuevo Movimiento
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setForm({
+                      product_id: "",
+                      type: "entrada",
+                      quantity: 1,
+                      description: "",
+                    });
+                    setFormError(null);
+                    setShowModal(true);
+                  }}
+                >
+                  <i className="bi bi-plus-circle me-1" />
+                  Nuevo Movimiento
+                </button>
+              )}
             </div>
             <div className="table-responsive">
               <table className="table align-middle mb-0">
@@ -452,9 +581,7 @@ export default function Inventory() {
                         <td>
                           <span
                             className={`badge ${
-                              m.type === "entrada"
-                                ? "bg-success"
-                                : "bg-danger"
+                              m.type === "entrada" ? "bg-success" : "bg-danger"
                             }`}
                           >
                             {m.type}
@@ -474,7 +601,6 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Alertas tab */}
       {activeTab === "alertas" && (
         <div className="card shadow-sm border-danger">
           <div className="card-body">
@@ -506,7 +632,97 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Análisis tab (placeholder) */}
+      {activeTab === "sugerencias" && (
+        <div className="cobrixs-card">
+          <div className="cobrixs-card-header">
+            {isAdmin ? "Sugerencias pendientes de aprobación" : "Mis sugerencias"}
+          </div>
+          <div className="cobrixs-card-body">
+            {suggestionsLoading ? (
+              <div className="text-center py-4">
+                <div className="spinner-border text-primary spinner-border-sm" />
+              </div>
+            ) : suggestions.length === 0 ? (
+              <p className="text-muted mb-0">
+                {isAdmin
+                  ? "No hay sugerencias pendientes."
+                  : "No has enviado sugerencias. Usa «Sugerir Ajuste» para proponer cambios."}
+              </p>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-professional align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Tipo</th>
+                      <th>Cantidad</th>
+                      <th>Fecha</th>
+                      {isAdmin && <th className="text-end">Acciones</th>}
+                      {!isAdmin && <th>Estado</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {suggestions.map((s) => (
+                      <tr key={s.id}>
+                        <td>{s.products?.name ?? "-"}</td>
+                        <td>
+                          <span
+                            className={`badge ${
+                              s.type === "entrada" ? "bg-success" : "bg-danger"
+                            }`}
+                          >
+                            {s.type}
+                          </span>
+                        </td>
+                        <td>{s.quantity}</td>
+                        <td>
+                          {new Date(s.created_at).toLocaleString("es-MX")}
+                        </td>
+                        {isAdmin && (
+                          <td className="text-end">
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-success me-1"
+                              onClick={() => void handleApprove(s)}
+                              disabled={saving}
+                            >
+                              Aprobar
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => void handleReject(s)}
+                              disabled={saving}
+                            >
+                              Rechazar
+                            </button>
+                          </td>
+                        )}
+                        {!isAdmin && (
+                          <td>
+                            <span
+                              className={`badge ${
+                                s.status === "pendiente"
+                                  ? "bg-warning"
+                                  : s.status === "aprobado"
+                                    ? "bg-success"
+                                    : "bg-secondary"
+                              }`}
+                            >
+                              {s.status}
+                            </span>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {activeTab === "analisis" && (
         <div className="card shadow-sm">
           <div className="card-body text-center py-5 text-muted">
@@ -516,8 +732,7 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Modal Nuevo Movimiento */}
-      {showModal && (
+      {showModal && isAdmin && (
         <div
           className="modal fade show d-block inventory-modal-overlay"
           tabIndex={-1}
@@ -635,7 +850,7 @@ export default function Inventory() {
                   type="button"
                   className="btn btn-primary"
                   disabled={saving}
-                  onClick={handleSaveMovement}
+                  onClick={() => void handleSaveMovement()}
                 >
                   {saving ? "Guardando..." : "Guardar"}
                 </button>
@@ -644,6 +859,160 @@ export default function Inventory() {
           </div>
         </div>
       )}
+
+      {showSuggestionModal && !isAdmin && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="suggestion-modal-title"
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 id="suggestion-modal-title" className="modal-title">
+                  Sugerir Ajuste de Inventario
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowSuggestionModal(false)}
+                  aria-label="Cerrar"
+                />
+              </div>
+              <div className="modal-body">
+                {formError && (
+                  <div className="alert alert-danger py-2">{formError}</div>
+                )}
+                <p className="text-muted small mb-3">
+                  Tu sugerencia será revisada por el administrador antes de
+                  aplicarse.
+                </p>
+                <div className="mb-3">
+                  <label className="form-label" htmlFor="sug-product">
+                    Producto *
+                  </label>
+                  <select
+                    id="sug-product"
+                    className="form-select"
+                    value={form.product_id}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, product_id: e.target.value }))
+                    }
+                    aria-label="Seleccionar producto"
+                  >
+                    <option value="">Seleccionar producto</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label" htmlFor="sug-type">
+                    Tipo
+                  </label>
+                  <select
+                    id="sug-type"
+                    className="form-select"
+                    value={form.type}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        type: e.target.value as "entrada" | "salida",
+                      }))
+                    }
+                    aria-label="Tipo"
+                  >
+                    <option value="entrada">Entrada</option>
+                    <option value="salida">Salida</option>
+                  </select>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label" htmlFor="sug-qty">
+                    Cantidad
+                  </label>
+                  <input
+                    id="sug-qty"
+                    type="number"
+                    className="form-control"
+                    min={1}
+                    value={form.quantity}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        quantity: Number(e.target.value) || 1,
+                      }))
+                    }
+                    aria-label="Cantidad"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label" htmlFor="sug-desc">
+                    Motivo o descripción
+                  </label>
+                  <input
+                    id="sug-desc"
+                    type="text"
+                    className="form-control"
+                    placeholder="Opcional"
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, description: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowSuggestionModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={saving}
+                  onClick={() => void handleSaveSuggestion()}
+                >
+                  {saving ? "Enviando..." : "Enviar Sugerencia"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface StatCardProps {
+  title: string;
+  value: number | string;
+  subtitle?: string;
+  icon: string;
+  color: string;
+}
+
+function StatCard({ title, value, subtitle, icon, color }: StatCardProps) {
+  return (
+    <div className="col-12 col-md-6 col-xl-3">
+      <div className="stat-card h-100">
+        <div className="d-flex justify-content-between align-items-start">
+          <div>
+            <div className="text-secondary small mb-1">{title}</div>
+            <h4 className="fw-bold mb-0">{value}</h4>
+            {subtitle && <small className="text-muted">{subtitle}</small>}
+          </div>
+          <div className={`stat-icon ${color}`}>
+            <i className={`bi ${icon}`} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

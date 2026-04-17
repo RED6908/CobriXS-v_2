@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+﻿import { useState, useMemo, useEffect } from "react";
 import { useProducts } from "../hooks/useProducts";
 import {
   createProduct,
@@ -80,7 +80,7 @@ export default function Products() {
   const lowStockCount = lowStockProducts.length;
 
   const handleExportExcel = () => {
-    const headers = ["Producto", "Código", "Stock", "Precio Compra", "Precio Venta", "Proveedor"];
+    const headers = ["Producto", "C├│digo", "Stock", "Precio Compra", "Precio Venta", "Proveedor"];
     const rows = filteredProducts.map((p) => [
       p.name,
       p.code ?? "",
@@ -152,7 +152,7 @@ export default function Products() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar producto?")) return;
+    if (!confirm("┬┐Eliminar producto?")) return;
     setErrorMessage(null);
     try {
       await deleteProduct(id);
@@ -229,9 +229,9 @@ export default function Products() {
       </nav>
 
       <div className="mb-3">
-        <h3 className="fw-bold mb-1">Catálogo de Productos</h3>
+        <h3 className="fw-bold mb-1">Cat├ílogo de Productos</h3>
         <p className="text-muted mb-0">
-          Gestión del catálogo de productos disponibles
+          Gesti├│n del cat├ílogo de productos disponibles
         </p>
       </div>
 
@@ -251,10 +251,10 @@ export default function Products() {
             id="products-search"
             type="search"
             className="form-control"
-            placeholder="Buscar producto, código o proveedor..."
+            placeholder="Buscar producto, c├│digo o proveedor..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            aria-label="Buscar producto, código o proveedor"
+            aria-label="Buscar producto, c├│digo o proveedor"
           />
         </div>
         <div className="d-flex gap-2">
@@ -293,7 +293,7 @@ export default function Products() {
                   </th>
                   <th>
                     <button type="button" className="btn btn-link p-0 text-dark text-decoration-none fw-semibold" onClick={() => toggleSort("code")}>
-                      Código <i className={`bi bi-arrow-down-up ms-1 small ${sortBy === "code" ? "opacity-100" : "opacity-50"}`} />
+                      C├│digo <i className={`bi bi-arrow-down-up ms-1 small ${sortBy === "code" ? "opacity-100" : "opacity-50"}`} />
                     </button>
                   </th>
                   <th>
@@ -441,7 +441,7 @@ function ProductModal({
               {isEdit ? "Editar Producto" : "Nuevo Producto"}
             </h5>
             <p className="text-muted small mb-0">
-              Completa la información del producto
+              Completa la informaci├│n del producto
             </p>
           </div>
 
@@ -479,7 +479,7 @@ function ProductModal({
                 </div>
                 <div className="mb-3">
                   <label htmlFor="product-category" className="form-label fw-semibold">
-                    Categoría <span className="text-danger">*</span>
+                    Categor├¡a <span className="text-danger">*</span>
                   </label>
                   <select
                     id="product-category"
@@ -488,7 +488,7 @@ function ProductModal({
                     onChange={(e) =>
                       setForm((f) => ({ ...f, category_id: e.target.value }))
                     }
-                    aria-label="Categoría"
+                    aria-label="Categor├¡a"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c} value={c}>{c}</option>
@@ -515,7 +515,7 @@ function ProductModal({
                 </div>
                 <div className="mb-3">
                   <label htmlFor="product-min-stock" className="form-label fw-semibold">
-                    Stock mínimo <span className="text-danger">*</span>
+                    Stock m├¡nimo <span className="text-danger">*</span>
                   </label>
                   <input
                     id="product-min-stock"
@@ -580,7 +580,7 @@ function ProductModal({
                 </div>
                 <div className="mb-3">
                   <label htmlFor="product-location" className="form-label fw-semibold">
-                    Ubicación en almacén <span className="text-danger">*</span>
+                    Ubicaci├│n en almac├®n <span className="text-danger">*</span>
                   </label>
                   <input
                     id="product-location"
@@ -599,7 +599,7 @@ function ProductModal({
               <div className="col-md-6">
                 <div className="mb-3">
                   <label htmlFor="product-code" className="form-label fw-semibold">
-                    Código de barras <span className="text-danger">*</span>
+                    C├│digo de barras <span className="text-danger">*</span>
                   </label>
                   <input
                     id="product-code"
@@ -647,7 +647,7 @@ function ProductModal({
                 </div>
                 <div className="mb-3">
                   <label htmlFor="product-max-stock" className="form-label fw-semibold">
-                    Stock máximo <span className="text-danger">*</span>
+                    Stock m├íximo <span className="text-danger">*</span>
                   </label>
                   <input
                     id="product-max-stock"
