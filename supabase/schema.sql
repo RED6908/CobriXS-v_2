@@ -29,6 +29,12 @@ create table if not exists public.products (
   code           text unique,
   category       text,
   stock          integer not null default 0,
+  min_stock      integer default 10,
+  max_stock      integer,
+  location       text,
+  unit           text default 'Pieza',
+  product_type   text default 'Unidad',
+  provider_id    uuid,
   purchase_price numeric(12,2),
   sale_price     numeric(12,2),
   created_at     timestamptz not null default now()
