@@ -8,11 +8,14 @@ import { RouterProvider } from "react-router-dom";
 import { router } from "./router";
 import "./Styles/layout.css";
 import { SettingsProvider } from "./context/SettingsContext";
+import { ToastProvider } from "./context/ToastContext";
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <SettingsProvider>
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
     </SettingsProvider>
   </StrictMode>,
-)
+);

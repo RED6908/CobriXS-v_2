@@ -9,6 +9,7 @@ const routeNames: Record<string, string> = {
   "/inventario": "Inventario",
   "/pos": "Panel de Cobro",
   "/provedores": "Proveedores",
+  "/tiendas": "Tiendas",
   "/reportes": "Reportes",
   "/configuracion": "Configuración",
 };
@@ -33,25 +34,24 @@ export default function Topbar() {
   }, [location.pathname]);
 
   return (
-    <nav className="bg-white border-bottom px-4 py-2 d-flex align-items-center justify-content-between">
-      <span className="fw-semibold">
-        <i className="bi bi-grid me-2 text-muted" />
+    <header className="cobrixs-topbar d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <h2 className="fs-6 fw-semibold text-dark mb-0">
+        <i className="bi bi-grid-3x3-gap me-2 text-secondary" />
         {pageName}
-      </span>
+      </h2>
 
-      <div className="d-flex align-items-center gap-3">
+      <div className="d-flex align-items-center gap-3 flex-wrap">
         {sessionOpen && (
-          <span className="badge bg-success-subtle text-success">
-            <i className="bi bi-check-circle me-1" />
+          <span className="badge bg-success bg-opacity-10 text-success px-3 py-2">
+            <i className="bi bi-check-circle-fill me-1" />
             Caja abierta
           </span>
         )}
 
-        <span className="text-muted small d-none d-md-inline">
-          <i className="bi bi-display me-1" />
-          CobriXS POS
+        <span className="text-secondary small d-none d-md-inline">
+          CobriXS v2.0
         </span>
       </div>
-    </nav>
+    </header>
   );
 }

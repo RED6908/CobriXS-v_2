@@ -12,9 +12,7 @@ export default function Sidebar() {
   const isAdmin = profile?.role === "admin";
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `nav-link d-flex align-items-center gap-2 ${
-      isActive ? "active" : "text-dark"
-    }`;
+    `nav-link d-flex align-items-center gap-2 ${isActive ? "active" : ""}`;
 
   const handleLogout = async () => {
     try {
@@ -32,29 +30,20 @@ export default function Sidebar() {
   };
 
   return (
-    <aside
-      className="bg-white border-end d-flex flex-column p-3"
-      style={{ width: 270, minWidth: 220 }}
-    >
-      {/* Logo */}
-      <div className="d-flex align-items-center gap-2 mb-4">
-        <div
-          className="rounded-circle bg-primary d-flex align-items-center justify-content-center"
-          style={{ width: 36, height: 36 }}
-        >
-          <i className="bi bi-shop text-white" />
-        </div>
-
-        <div>
-          <strong>CobriXS</strong>
-          <div className="text-muted small">
-            Sistema POS Profesional
+    <aside className="cobrixs-sidebar">
+      <div className="sidebar-brand">
+        <div className="d-flex align-items-center gap-3">
+          <div className="sidebar-brand-icon">
+            <i className="bi bi-shop" />
+          </div>
+          <div>
+            <strong className="text-dark d-block">CobriXS</strong>
+            <small className="text-muted">Sistema POS</small>
           </div>
         </div>
       </div>
 
-      {/* Menu */}
-      <ul className="nav nav-pills flex-column gap-2 mb-auto">
+      <ul className="nav flex-column gap-1 p-3 flex-grow-1">
 
         <li className="nav-item">
           <NavLink to="/" end className={linkClass}>
@@ -88,13 +77,11 @@ export default function Sidebar() {
           </NavLink>
         </li>
 
-        {isAdmin && (
-          <li className="nav-item">
-            <NavLink to="/provedores" className={linkClass}>
-              <i className="bi bi-buildings" /> {t.suppliers}
-            </NavLink>
-          </li>
-        )}
+        <li className="nav-item">
+          <NavLink to="/provedores" className={linkClass}>
+            <i className="bi bi-buildings" /> {t.suppliers}
+          </NavLink>
+        </li>
 
         {isAdmin && (
           <li className="nav-item">
@@ -112,27 +99,22 @@ export default function Sidebar() {
 
       </ul>
 
-      {/* Footer */}
-      <div className="border-top pt-3">
-
-        <div className="small fw-semibold">
+      <div className="sidebar-footer">
+        <div className="text-dark small fw-semibold">
           {profile?.name || "Usuario"}
         </div>
-
         <div className="text-muted small">
-          {profile?.role === "admin"
-            ? "Administrador"
-            : "Vendedor"}
+          {profile?.role === "admin" ? "Administrador" : "Vendedor"}
         </div>
-
         <button
-          className="btn btn-outline-danger btn-sm w-100 mt-3"
+          type="button"
+          className="btn btn-outline-secondary btn-sm w-100 mt-2"
           onClick={handleLogout}
+          aria-label="Cerrar sesión"
         >
           <i className="bi bi-box-arrow-right me-1" />
           {t.logout}
         </button>
-
       </div>
     </aside>
   );

@@ -5,6 +5,7 @@ export const es = {
   inventory: "Inventario",
   pos: "Panel de Cobro",
   suppliers: "Proveedores",
+  stores: "Tiendas",
   reports: "Reportes",
   settings: "Configuración",
   logout: "Cerrar sesión",

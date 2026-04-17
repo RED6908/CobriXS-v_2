@@ -1,10 +1,13 @@
 import { useState, useMemo } from "react";
 import { useProducts } from "../hooks/useProducts";
+import { useToast } from "../context/ToastContext";
 import { supabase } from "../lib/supabase";
+import PageHeader from "../components/PageHeader";
 
 export default function Products() {
 
   const { products, loading, error, refetch } = useProducts();
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -17,7 +20,7 @@ export default function Products() {
     stock: 0,
     purchase_price: 0,
     sale_price: 0,
-    category_id: "",
+    category: "",
   });
 
   /* =========================
@@ -40,7 +43,10 @@ export default function Products() {
 
   const handleSave = async () => {
 
-    if (!form.name) return alert("El nombre es obligatorio");
+    if (!form.name) {
+      toastError("El nombre es obligatorio");
+      return;
+    }
 
     setSaving(true);
 
@@ -50,7 +56,7 @@ export default function Products() {
       stock: Number(form.stock),
       purchase_price: Number(form.purchase_price),
       sale_price: Number(form.sale_price),
-      category_id: form.category_id || null,
+      category: form.category || null,
     };
 
     let error;
@@ -67,13 +73,13 @@ export default function Products() {
     }
 
     if (error) {
-      alert(error.message);
+      toastError(error.message);
       setSaving(false);
       return;
     }
 
     setShowModal(false);
-
+    toastSuccess(form.id ? "Producto actualizado" : "Producto creado");
     setForm({
       id: "",
       name: "",
@@ -81,7 +87,7 @@ export default function Products() {
       stock: 0,
       purchase_price: 0,
       sale_price: 0,
-      category_id: "",
+      category: "",
     });
 
     await refetch();
@@ -93,19 +99,16 @@ export default function Products() {
   ========================== */
 
   const handleDelete = async (id: string) => {
-
-    if (!confirm("¿Eliminar producto?")) return;
-
     const { error } = await supabase
       .from("products")
       .delete()
       .eq("id", id);
 
     if (error) {
-      alert(error.message);
+      toastError(error.message);
       return;
     }
-
+    toastSuccess("Producto eliminado");
     await refetch();
   };
 
@@ -124,45 +127,43 @@ export default function Products() {
 
   return (
     <div className="container-fluid">
-
-      <div className="mb-4">
-        <h3 className="fw-bold mb-1">Catálogo de Productos</h3>
-        <p className="text-muted">
-          Gestión del catálogo de productos disponibles
-        </p>
-      </div>
+      <PageHeader
+        title="Catálogo de Productos"
+        subtitle="Gestión del catálogo de productos disponibles"
+        breadcrumb={[{ label: "Inicio", to: "/" }, { label: "Productos" }]}
+      />
 
       {lowStockProducts.length > 0 && (
-        <div className="alert alert-warning mb-4">
-          ⚠ {lowStockProducts.length} productos con stock bajo
+        <div className="alert alert-warning d-flex align-items-center mb-4" role="alert">
+          <i className="bi bi-exclamation-triangle-fill me-2" />
+          {lowStockProducts.length} productos con stock bajo
         </div>
       )}
 
-      <div className="d-flex justify-content-between mb-4">
-
-        <input
-          type="text"
-          className="form-control w-50"
-          placeholder="Buscar producto..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowModal(true)}
-        >
+      <div className="d-flex flex-column flex-md-row gap-3 justify-content-between align-items-md-center mb-4">
+        <div className="input-group" style={{ maxWidth: 320 }}>
+          <span className="input-group-text bg-white">
+            <i className="bi bi-search text-muted" />
+          </span>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Buscar producto..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Buscar producto"
+          />
+        </div>
+        <button className="btn btn-primary" onClick={() => { setForm({ id: "", name: "", code: "", stock: 0, purchase_price: 0, sale_price: 0, category: "" }); setShowModal(true); }}>
+          <i className="bi bi-plus-lg me-1" />
           Nuevo Producto
         </button>
-
       </div>
 
-      <div className="card shadow-sm">
+      <div className="cobrixs-card">
         <div className="table-responsive">
-
-          <table className="table align-middle mb-0">
-
-            <thead className="table-light">
+          <table className="table table-professional align-middle mb-0">
+            <thead>
               <tr>
                 <th>Producto</th>
                 <th>Código</th>
@@ -207,6 +208,7 @@ export default function Products() {
                     <td>
 
                       <button
+                        type="button"
                         className="btn btn-sm btn-outline-primary me-2"
                         onClick={() => {
 
@@ -217,7 +219,7 @@ export default function Products() {
                             stock: product.stock,
                             purchase_price: product.purchase_price ?? 0,
                             sale_price: product.sale_price ?? 0,
-                            category_id: product.category_id ?? "",
+                            category: product.category ?? "",
                           });
 
                           setShowModal(true);
@@ -227,8 +229,12 @@ export default function Products() {
                       </button>
 
                       <button
+                        type="button"
                         className="btn btn-sm btn-outline-danger"
-                        onClick={() => handleDelete(product.id)}
+                        onClick={() => {
+                          if (window.confirm(`¿Eliminar "${product.name}"?`)) handleDelete(product.id);
+                        }}
+                        aria-label="Eliminar producto"
                       >
                         Eliminar
                       </button>
@@ -246,93 +252,92 @@ export default function Products() {
         </div>
       </div>
 
-      {/* MODAL */}
-
       {showModal && (
-
-        <div className="modal fade show d-block">
-
-          <div className="modal-dialog">
-
-            <div className="modal-content p-4">
-
-              <h5 className="mb-3">
-                {form.id ? "Editar Producto" : "Nuevo Producto"}
-              </h5>
-
-              <input
-                className="form-control mb-2"
-                placeholder="Nombre"
-                value={form.name}
-                onChange={(e) =>
-                  setForm({ ...form, name: e.target.value })
-                }
-              />
-
-              <input
-                className="form-control mb-2"
-                placeholder="Código"
-                value={form.code}
-                onChange={(e) =>
-                  setForm({ ...form, code: e.target.value })
-                }
-              />
-
-              <input
-                type="number"
-                className="form-control mb-2"
-                placeholder="Stock"
-                value={form.stock}
-                onChange={(e) =>
-                  setForm({ ...form, stock: Number(e.target.value) })
-                }
-              />
-
-              <input
-                type="number"
-                className="form-control mb-2"
-                placeholder="Precio compra"
-                value={form.purchase_price}
-                onChange={(e) =>
-                  setForm({ ...form, purchase_price: Number(e.target.value) })
-                }
-              />
-
-              <input
-                type="number"
-                className="form-control mb-3"
-                placeholder="Precio venta"
-                value={form.sale_price}
-                onChange={(e) =>
-                  setForm({ ...form, sale_price: Number(e.target.value) })
-                }
-              />
-
-              <div className="d-flex justify-content-end gap-2">
-
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => setShowModal(false)}
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  className="btn btn-primary"
-                  disabled={saving}
-                  onClick={handleSave}
-                >
+        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">{form.id ? "Editar Producto" : "Nuevo Producto"}</h5>
+                <button type="button" className="btn-close" aria-label="Cerrar" onClick={() => setShowModal(false)} />
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Nombre *</label>
+                  <input
+                    className="form-control"
+                    placeholder="Nombre del producto"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    aria-label="Nombre"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Código</label>
+                  <input
+                    className="form-control"
+                    placeholder="Código o SKU"
+                    value={form.code}
+                    onChange={(e) => setForm({ ...form, code: e.target.value })}
+                    aria-label="Código"
+                  />
+                </div>
+                <div className="row g-2">
+                  <div className="col-4">
+                    <label className="form-label">Stock</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      min={0}
+                      value={form.stock}
+                      onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+                      aria-label="Stock"
+                    />
+                  </div>
+                  <div className="col-4">
+                    <label className="form-label">Precio compra</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      min={0}
+                      step="0.01"
+                      value={form.purchase_price}
+                      onChange={(e) => setForm({ ...form, purchase_price: Number(e.target.value) })}
+                      aria-label="Precio compra"
+                    />
+                  </div>
+                  <div className="col-4">
+                    <label className="form-label">Precio venta</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      min={0}
+                      step="0.01"
+                      value={form.sale_price}
+                      onChange={(e) => setForm({ ...form, sale_price: Number(e.target.value) })}
+                      aria-label="Precio venta"
+                    />
+                  </div>
+                </div>
+                <div className="mb-0 mt-3">
+                  <label className="form-label">Categoría</label>
+                  <input
+                    className="form-control"
+                    placeholder="Ej. Bebidas, Despensa"
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    aria-label="Categoría"
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                <button className="btn btn-primary" disabled={saving} onClick={handleSave}>
                   {saving ? "Guardando..." : "Guardar"}
                 </button>
-
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       )}
 
     </div>
