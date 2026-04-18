@@ -1,11 +1,13 @@
 #!/bin/bash
+set -euo pipefail
 
 echo "Desplegando a ENTORNO DE PRUEBAS (STAGING)..."
 
-# Detener contenedores anteriores
-docker-compose down
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$ROOT/infra"
 
-# Construir y levantar nueva versión
-docker-compose up --build -d
+docker compose down
+docker compose up --build -d
 
 echo "Despliegue en staging completado correctamente"

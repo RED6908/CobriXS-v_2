@@ -1,14 +1,16 @@
 #!/bin/bash
+set -euo pipefail
 
 echo "Iniciando ROLLBACK del sistema CobriXS..."
 
-# Regresar a la versión anterior del código
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$ROOT"
 git checkout HEAD~1
 
-# Detener contenedores actuales
-docker-compose down
-
-# Levantar versión anterior estable
-docker-compose up --build -d
+cd "$ROOT/infra"
+docker compose down
+docker compose up --build -d
 
 echo "Rollback completado correctamente"
