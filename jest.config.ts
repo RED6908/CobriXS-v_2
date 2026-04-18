@@ -4,7 +4,7 @@ const config: Config = {
   preset: "ts-jest",
   testEnvironment: "jsdom",
 
-  roots: ["<rootDir>/src", "<rootDir>/unitarias"],
+  roots: ["<rootDir>/src", "<rootDir>/tests/unitarias"],
 
   transform: {
     "^.+\\.(ts|tsx)$": ["ts-jest", { tsconfig: "tsconfig.jest.json" }]
