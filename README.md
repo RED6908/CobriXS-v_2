@@ -111,12 +111,17 @@ npm test
 docker build -t cobrixs-v_2:latest .
 ```
 
-**Ejecutar la app con el Dockerfile del proyecto:**
+**Ejecutar la app con el Dockerfile del proyecto** (imagen de producción: Nginx sirve `dist/` en el puerto 80 del contenedor):
 
 ```bash
-docker build -t cobrixs-v_2:latest .
-docker run --rm -p 5173:5173 --env-file .env cobrixs-v_2:latest
+docker build -t cobrixs-v_2:latest \
+  --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
+  --build-arg VITE_SUPABASE_ANON_KEY="$VITE_SUPABASE_ANON_KEY" \
+  .
+docker run --rm -p 8080:80 cobrixs-v_2:latest
 ```
+
+**Desarrollo en contenedor** (Vite con hot reload): `infra/Dockerfile.dev` y un `docker compose`/`run` montando el código; el despliegue en CI usa el `Dockerfile` de la raíz.
 
 ## Despliegue
 
