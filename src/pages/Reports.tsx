@@ -10,7 +10,7 @@ import {
   Legend,
 } from "chart.js";
 import { Line, Pie } from "react-chartjs-2";
-import type { FC } from "react";
+import type { ChartData } from "chart.js";
 import { getSalesByDay, getSalesReport } from "../services/reports.service";
 import { useStore } from "../context/StoreContext";
 import { downloadReportCSV } from "../utils/downloadReport";
@@ -123,12 +123,13 @@ export default function Reports() {
 
   const sortedDays = useMemo(() => Object.keys(salesByDay).sort(), [salesByDay]);
 
-  const salesTrendData = useMemo(
-    () => ({
-      labels: sortedDays.map((d) => {
-        const [, m, day] = d.split("-");
-        return `${day}/${m}`;
-      }),
+  const salesTrendData = useMemo((): ChartData<"line", number[], string> => {
+    const labels = sortedDays.map((d) => {
+      const [, m, day] = d.split("-");
+      return `${day}/${m}`;
+    });
+    return {
+      labels,
       datasets: [
         {
           label: "Ventas",
@@ -139,11 +140,10 @@ export default function Reports() {
           fill: true,
         },
       ],
-    }),
-    [sortedDays, salesByDay]
-  );
+    };
+  }, [sortedDays, salesByDay]);
 
-  const categoryData = {
+  const categoryData: ChartData<"pie", number[], string> = {
     labels: ["Bebidas", "Despensa", "Lácteos", "Panadería", "Limpieza"],
     datasets: [
       {
@@ -284,7 +284,7 @@ export default function Reports() {
 }
 
 /* ===== Reusable Stat Card ===== */
-const StatCard: FC<StatCardProps> = ({ title, value, change, icon, positive }) => {
+function StatCard({ title, value, change, icon, positive }: StatCardProps) {
   const changeClass =
     positive === false ? "text-danger" : positive === true ? "text-success" : "text-muted";
 
@@ -304,4 +304,4 @@ const StatCard: FC<StatCardProps> = ({ title, value, change, icon, positive }) =
       </div>
     </div>
   );
-};
+}

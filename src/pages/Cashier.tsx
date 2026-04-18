@@ -173,6 +173,7 @@ export default function Cashier() {
     total,
     cart,
     error,
+    setError,
     toastSuccess,
     toastError,
   ]);

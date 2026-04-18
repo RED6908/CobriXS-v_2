@@ -16,6 +16,16 @@ import type { Product, InventorySuggestion } from "../types/database";
 
 type Tab = "productos" | "movimientos" | "alertas" | "sugerencias" | "analisis";
 
+/** Tarjetas del tab Análisis: `badge` y `highlight` son opcionales (evita uniones incompatibles en TS). */
+type InventoryAnalisisCard = {
+  id: string;
+  title: string;
+  value: string;
+  icon: string;
+  badge?: string;
+  highlight?: boolean;
+};
+
 const CATEGORY_ICONS: Record<string, string> = {
   Todos: "bi-funnel",
   Bebidas: "bi-cup-hot",
@@ -120,6 +130,56 @@ export default function Inventory() {
     () => products.filter((p) => p.stock <= CRITICAL_STOCK).length,
     [products]
   );
+
+  const analisisCards = useMemo((): InventoryAnalisisCard[] => {
+    const categoryQty = Object.keys(categories).filter((k) => k !== "Todos").length;
+    return [
+      {
+        id: "skus",
+        title: "Productos",
+        value: String(stats.total),
+        icon: "bi-box-seam",
+        highlight: true,
+      },
+      {
+        id: "below_min",
+        title: "Stock bajo",
+        value: String(stats.lowStock.length),
+        icon: "bi-exclamation-triangle",
+        badge:
+          criticalCount > 0
+            ? `${criticalCount} crítico${criticalCount === 1 ? "" : "s"}`
+            : undefined,
+      },
+      {
+        id: "categories",
+        title: "Categorías",
+        value: String(categoryQty),
+        icon: "bi-diagram-3",
+      },
+      {
+        id: "valor",
+        title: "Valor inventario",
+        value: `$${stats.totalValue.toLocaleString("es-MX", {
+          minimumFractionDigits: 2,
+        })}`,
+        icon: "bi-cash-stack",
+      },
+      {
+        id: "movs",
+        title: "Movimientos",
+        value: String(stats.movementsCount),
+        icon: "bi-arrow-left-right",
+      },
+    ];
+  }, [
+    categories,
+    stats.total,
+    stats.lowStock.length,
+    stats.totalValue,
+    stats.movementsCount,
+    criticalCount,
+  ]);
 
   const isLowStock = (p: Product) =>
     p.stock < (p.min_stock ?? LOW_STOCK_THRESHOLD_DEFAULT);
@@ -724,11 +784,10 @@ export default function Inventory() {
       )}
 
       {activeTab === "analisis" && (
-        <div className="card shadow-sm">
-          <div className="card-body text-center py-5 text-muted">
-            <i className="bi bi-bar-chart fs-1 mb-3 d-block" />
-            <p className="mb-0">Análisis de inventario próximamente</p>
-          </div>
+        <div className="row g-3">
+          {analisisCards.map((card) => (
+            <AnalisisSummaryCard key={card.id} card={card} />
+          ))}
         </div>
       )}
 
@@ -996,6 +1055,40 @@ interface StatCardProps {
   subtitle?: string;
   icon: string;
   color: string;
+}
+
+function AnalisisSummaryCard({ card }: { card: InventoryAnalisisCard }) {
+  return (
+    <div className="col-12 col-sm-6 col-lg-4 col-xl-2">
+      <div
+        className={`card h-100 shadow-sm ${
+          card.highlight ? "border border-primary border-2" : ""
+        }`}
+      >
+        <div className="card-body">
+          <div className="d-flex justify-content-between align-items-start gap-2">
+            <div className="min-w-0">
+              <div className="text-secondary small mb-1">{card.title}</div>
+              <h4 className="fw-bold mb-0 text-break">{card.value}</h4>
+              {card.badge != null && card.badge !== "" && (
+                <span className="badge bg-danger bg-opacity-10 text-danger mt-2">
+                  {card.badge}
+                </span>
+              )}
+            </div>
+            <div
+              className={`rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0 ${
+                card.highlight ? "bg-primary bg-opacity-10 text-primary" : "bg-light text-secondary"
+              }`}
+              style={{ width: 44, height: 44 }}
+            >
+              <i className={`bi ${card.icon} fs-5`} aria-hidden />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function StatCard({ title, value, subtitle, icon, color }: StatCardProps) {
