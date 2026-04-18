@@ -51,7 +51,12 @@ export function useInventory() {
       quantity: number,
       description: string
     ) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Usuario no autenticado");
+      }
       const product = products.find((p) => p.id === productId);
       await createMovement({
         product_id: productId,
@@ -59,16 +64,19 @@ export function useInventory() {
         type,
         quantity,
         description,
-        user_id: user?.id ?? null,
+        user_id: user.id,
       });
       await fetchAll();
     },
     [fetchAll, products, currentStoreId]
   );
 
+  const defaultMinStock = 10;
   const stats = {
     total: products.length,
-    lowStock: products.filter((p) => p.stock <= 5),
+    lowStock: products.filter(
+      (p) => p.stock < (p.min_stock ?? defaultMinStock)
+    ),
     totalValue: products.reduce(
       (sum, p) => sum + p.stock * (p.purchase_price ?? 0),
       0

@@ -29,9 +29,25 @@ create table if not exists public.products (
   code           text unique,
   category       text,
   stock          integer not null default 0,
+  min_stock      integer default 10,
+  max_stock      integer,
+  location       text,
+  unit           text default 'Pieza',
+  product_type   text default 'Unidad',
+  provider_id    uuid,
   purchase_price numeric(12,2),
   sale_price     numeric(12,2),
   created_at     timestamptz not null default now()
+);
+
+-- =============================================
+-- TABLA: categories
+-- =============================================
+create table if not exists public.categories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT categories_pkey PRIMARY KEY (id)
 );
 
 -- =============================================

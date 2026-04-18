@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Entorno (credenciales; no subir a GitHub)
+.env
+.env.*
+!.env.example

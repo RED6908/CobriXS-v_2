@@ -1,5 +1,6 @@
 export type UserRole = "admin" | "vendedor";
 
+
 /* =========================
    TIENDAS
 ========================= */
@@ -21,8 +22,24 @@ export interface Product {
   code: string | null;
   category: string | null;
   stock: number;
+  min_stock?: number | null;
+  max_stock?: number | null;
+  location?: string | null;
+  unit?: string | null;
+  product_type?: string | null;
+  provider_id?: string | null;
   purchase_price: number | null;
   sale_price: number | null;
+  created_at: string;
+  category_id: Categories["id"];
+}
+
+/* =========================
+   CATEGORIAS
+========================= */
+export interface Categories {
+  id: string;
+  name: string;
   created_at: string;
 }
 
@@ -38,7 +55,7 @@ export interface InventoryMovement {
   type: MovementType;
   quantity: number;
   description: string | null;
-  user_id: string | null;
+  user_id: UserProfile["id"];
   created_at: string;
   products?: Pick<Product, "name" | "code">;
 }

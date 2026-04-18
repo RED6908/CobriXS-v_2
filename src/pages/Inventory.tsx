@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useInventory } from "../hooks/useInventory";
 import { useToast } from "../context/ToastContext";
 import { useAuth } from "../hooks/useAuth";
@@ -11,9 +12,26 @@ import {
 } from "../services/inventorySuggestions.service";
 import { supabase } from "../lib/supabase";
 import PageHeader from "../components/PageHeader";
-import type { InventorySuggestion } from "../types/database";
+import type { Product, InventorySuggestion } from "../types/database";
 
-type Tab = "productos" | "movimientos" | "alertas" | "sugerencias";
+type Tab = "productos" | "movimientos" | "alertas" | "sugerencias" | "analisis";
+
+const CATEGORY_ICONS: Record<string, string> = {
+  Todos: "bi-funnel",
+  Bebidas: "bi-cup-hot",
+  Alimentos: "bi-apple",
+  Higiene: "bi-stars",
+  Hogar: "bi-house",
+  Otros: "bi-box",
+  "Sin categoría": "bi-tag",
+};
+
+function getCategoryIcon(cat: string): string {
+  return CATEGORY_ICONS[cat] ?? "bi-box";
+}
+
+const LOW_STOCK_THRESHOLD_DEFAULT = 10;
+const CRITICAL_STOCK = 2;
 
 export default function Inventory() {
   const { profile } = useAuth();
@@ -28,23 +46,24 @@ export default function Inventory() {
 
   const [activeTab, setActiveTab] = useState<Tab>("productos");
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("Todos");
   const [showModal, setShowModal] = useState(false);
-
+  const [showSuggestionModal, setShowSuggestionModal] = useState(false);
   const [form, setForm] = useState({
     product_id: "",
     type: "entrada" as "entrada" | "salida",
     quantity: 1,
     description: "",
   });
-
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [showSuggestionModal, setShowSuggestionModal] = useState(false);
 
   const loadSuggestions = useCallback(async () => {
     setSuggestionsLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const data = await getSuggestions(
         currentStoreId,
         isAdmin ? "pendiente" : undefined,
@@ -59,54 +78,63 @@ export default function Inventory() {
   }, [currentStoreId, isAdmin]);
 
   useEffect(() => {
-    if (activeTab === "sugerencias") loadSuggestions();
+    if (activeTab === "sugerencias") void loadSuggestions();
   }, [activeTab, loadSuggestions]);
 
-  /* ===============================
-     FILTRO PRODUCTOS
-  =============================== */
-
   const filteredProducts = useMemo(() => {
-    return products.filter(
+    let list = products.filter(
       (p) =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         (p.code ?? "").toLowerCase().includes(search.toLowerCase())
     );
-  }, [products, search]);
-
-  /* ===============================
-     CATEGORÍAS DINÁMICAS
-  =============================== */
+    if (categoryFilter !== "Todos") {
+      list = list.filter(
+        (p) => (p.category ?? "Sin categoría") === categoryFilter
+      );
+    }
+    return list;
+  }, [products, search, categoryFilter]);
 
   const categories = useMemo(() => {
-    const grouped: Record<string, number> = {};
-
+    const grouped: Record<string, number> = { Todos: products.length };
     products.forEach((p) => {
       const cat = p.category ?? "Sin categoría";
       grouped[cat] = (grouped[cat] || 0) + 1;
     });
-
     return grouped;
   }, [products]);
 
-  /* ===============================
-     GUARDAR MOVIMIENTO
-  =============================== */
+  const lowStockByCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    products.forEach((p) => {
+      const min = p.min_stock ?? LOW_STOCK_THRESHOLD_DEFAULT;
+      if (p.stock < min) {
+        const cat = p.category ?? "Sin categoría";
+        map[cat] = (map[cat] || 0) + 1;
+      }
+    });
+    return map;
+  }, [products]);
+
+  const criticalCount = useMemo(
+    () => products.filter((p) => p.stock <= CRITICAL_STOCK).length,
+    [products]
+  );
+
+  const isLowStock = (p: Product) =>
+    p.stock < (p.min_stock ?? LOW_STOCK_THRESHOLD_DEFAULT);
 
   const handleSaveMovement = useCallback(async () => {
     if (!form.product_id) {
       setFormError("Selecciona un producto");
       return;
     }
-
     if (form.quantity <= 0) {
       setFormError("Cantidad inválida");
       return;
     }
-
     setSaving(true);
     setFormError(null);
-
     try {
       await addMovement(
         form.product_id,
@@ -114,7 +142,6 @@ export default function Inventory() {
         form.quantity,
         form.description
       );
-
       setShowModal(false);
       toastSuccess("Movimiento registrado correctamente");
       setForm({
@@ -123,12 +150,13 @@ export default function Inventory() {
         quantity: 1,
         description: "",
       });
+      await refetch();
     } catch {
-      setFormError("Error al guardar");
+      setFormError("Error al guardar el movimiento");
     } finally {
       setSaving(false);
     }
-  }, [form, addMovement, toastSuccess]);
+  }, [form, addMovement, toastSuccess, refetch]);
 
   const handleSaveSuggestion = useCallback(async () => {
     if (!form.product_id) {
@@ -139,7 +167,9 @@ export default function Inventory() {
       setFormError("Cantidad inválida");
       return;
     }
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       setFormError("Debes iniciar sesión");
       return;
@@ -159,7 +189,7 @@ export default function Inventory() {
       setShowSuggestionModal(false);
       setForm({ product_id: "", type: "entrada", quantity: 1, description: "" });
       toastSuccess("Sugerencia enviada. El administrador la revisará.");
-      loadSuggestions();
+      void loadSuggestions();
     } catch {
       setFormError("Error al enviar sugerencia");
       toastError("Error al enviar sugerencia");
@@ -183,7 +213,7 @@ export default function Inventory() {
         );
         toastSuccess("Sugerencia aprobada y movimiento aplicado");
         await refetch();
-        loadSuggestions();
+        void loadSuggestions();
       } catch {
         toastError("Error al aprobar");
       } finally {
@@ -199,7 +229,7 @@ export default function Inventory() {
       try {
         await rejectSuggestion(s.id, (await supabase.auth.getUser()).data.user!.id);
         toastSuccess("Sugerencia rechazada");
-        loadSuggestions();
+        void loadSuggestions();
       } catch {
         toastError("Error al rechazar");
       } finally {
@@ -209,25 +239,39 @@ export default function Inventory() {
     [toastSuccess, toastError, loadSuggestions]
   );
 
-  /* ===============================
-     LOADING / ERROR
-  =============================== */
-
-  if (loading)
+  if (loading) {
     return (
       <div className="text-center py-5">
         <div className="spinner-border text-primary" />
+        <p className="mt-3 text-muted">Cargando inventario...</p>
       </div>
     );
+  }
 
-  if (error) return <div className="alert alert-danger">{error}</div>;
+  if (error) {
+    return (
+      <div className="alert alert-danger">
+        {error}
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-danger ms-2"
+          onClick={() => window.location.reload()}
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
 
-  /* ===============================
-     RENDER
-  =============================== */
+  const categoryKeys = [
+    "Todos",
+    ...Object.keys(categories).filter((k) => k !== "Todos"),
+  ];
+
+  const categoryCount = Object.keys(categories).filter((k) => k !== "Todos").length;
 
   return (
-    <div className="container-fluid">
+    <div className="container-fluid inventory-page">
       <PageHeader
         title="Gestión de Inventario"
         subtitle="Control completo de productos, stock y movimientos"
@@ -238,14 +282,18 @@ export default function Inventory() {
         <StatCard
           title="Productos Totales"
           value={stats.total}
-          subtitle={`${Object.keys(categories).length} categorías`}
+          subtitle={`En ${categoryCount || 1} categorías`}
           icon="bi-box"
           color="primary"
         />
         <StatCard
           title="Alertas de Stock"
           value={stats.lowStock.length}
-          subtitle="Stock menor a 10"
+          subtitle={
+            criticalCount > 0
+              ? `${criticalCount} críticos · stock bajo`
+              : "Stock bajo"
+          }
           icon="bi-exclamation-triangle"
           color="warning"
         />
@@ -265,188 +313,321 @@ export default function Inventory() {
         />
       </div>
 
-      {/* Tabs */}
-      <ul className="nav nav-tabs mb-4">
-        {(["productos", "movimientos", "alertas", "sugerencias"] as Tab[]).map((tab) => (
+      <ul className="nav nav-tabs mb-4 flex-wrap">
+        {(
+          [
+            ["productos", "Productos"],
+            ["movimientos", "Movimientos"],
+            ["alertas", `Alertas (${stats.lowStock.length})`],
+            [
+              "sugerencias",
+              isAdmin ? "Sugerencias pendientes" : "Mis sugerencias",
+            ],
+            ["analisis", "Análisis"],
+          ] as const
+        ).map(([tab, label]) => (
           <li key={tab} className="nav-item">
             <button
+              type="button"
               className={`nav-link ${activeTab === tab ? "active" : ""}`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab === "productos"
-                ? "Productos"
-                : tab === "movimientos"
-                ? "Movimientos"
-                : tab === "alertas"
-                ? "Alertas"
-                : isAdmin
-                ? "Sugerencias pendientes"
-                : "Mis sugerencias"}
+              {label}
             </button>
           </li>
         ))}
       </ul>
 
-      {/* Search + Button */}
-      <div className="d-flex flex-column flex-md-row gap-3 mb-4">
-        <div className="input-group">
-          <span className="input-group-text bg-white">
-            <i className="bi bi-search" />
-          </span>
-          <input
-            className="form-control"
-            placeholder="Buscar por nombre o código..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
-        {isAdmin ? (
-          <button
-            className="btn btn-primary ms-md-auto"
-            onClick={() => {
-              setForm({ product_id: "", type: "entrada", quantity: 1, description: "" });
-              setFormError(null);
-              setShowModal(true);
-            }}
-          >
-            <i className="bi bi-plus-circle me-1" />
-            Nuevo Movimiento
-          </button>
-        ) : (
-          <button
-            className="btn btn-outline-primary ms-md-auto"
-            onClick={() => {
-              setForm({ product_id: "", type: "entrada", quantity: 1, description: "" });
-              setFormError(null);
-              setShowSuggestionModal(true);
-            }}
-          >
-            <i className="bi bi-send me-1" />
-            Sugerir Ajuste
-          </button>
-        )}
-      </div>
-
-      {/* PRODUCTOS TAB */}
       {activeTab === "productos" && (
-        <>
-          <div className="row g-3 mb-4">
-            {Object.entries(categories).map(([cat, count]) => (
-              <CategoryCard
-                key={cat}
-                title={cat}
-                value={count}
-                badge={
-                  products.filter(
-                    (p) => (p.category ?? "Sin categoría") === cat && p.stock < 10
-                  ).length > 0
-                    ? `${
-                        products.filter(
-                          (p) =>
-                            (p.category ?? "Sin categoría") === cat &&
-                            p.stock < 10
-                        ).length
-                      } bajo`
-                    : undefined
-                }
-                icon="bi-funnel"
-              />
-            ))}
+        <div className="d-flex flex-column flex-md-row gap-3 mb-4">
+          <div className="input-group flex-grow-1">
+            <span className="input-group-text bg-white">
+              <i className="bi bi-search" />
+            </span>
+            <input
+              type="search"
+              className="form-control"
+              placeholder="Buscar por nombre o código..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Buscar producto por nombre o código"
+            />
           </div>
+          <div className="d-flex flex-wrap gap-2">
+            <Link to="/productos" className="btn btn-primary">
+              <i className="bi bi-box me-1" />
+              Nuevo Producto
+            </Link>
+            {isAdmin ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setForm({
+                    product_id: "",
+                    type: "entrada",
+                    quantity: 1,
+                    description: "",
+                  });
+                  setFormError(null);
+                  setShowModal(true);
+                }}
+              >
+                <i className="bi bi-plus-circle me-1" />
+                Nuevo Movimiento
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-outline-primary"
+                onClick={() => {
+                  setForm({
+                    product_id: "",
+                    type: "entrada",
+                    quantity: 1,
+                    description: "",
+                  });
+                  setFormError(null);
+                  setShowSuggestionModal(true);
+                }}
+              >
+                <i className="bi bi-send me-1" />
+                Sugerir Ajuste
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
-          <div className="cobrixs-card">
-            <div className="cobrixs-card-header">Listado de productos</div>
-            <div className="cobrixs-card-body">
-              <div className="table-responsive">
-                <table className="table table-professional align-middle mb-0">
-                  <thead>
+      {activeTab === "productos" && (
+        <div className="row g-3 mb-4">
+          {categoryKeys.map((cat) => {
+            const count = categories[cat] ?? 0;
+            const lowInCat = lowStockByCategory[cat] ?? 0;
+            const isActive = categoryFilter === cat;
+            return (
+              <div key={cat} className="col-6 col-md-4 col-lg-2">
+                <button
+                  type="button"
+                  className={`card w-100 text-center h-100 category-card border ${
+                    isActive ? "active" : ""
+                  }`}
+                  onClick={() => setCategoryFilter(cat)}
+                  style={{ background: "white" }}
+                >
+                  <div className="card-body py-3">
+                    <div
+                      className="category-card-icon rounded-circle d-inline-flex align-items-center justify-content-center mb-2"
+                      style={{
+                        width: 40,
+                        height: 40,
+                        backgroundColor: isActive ? undefined : "#f8f9fa",
+                      }}
+                    >
+                      <i className={`bi ${getCategoryIcon(cat)}`} />
+                    </div>
+                    <div className="fw-semibold small">{cat}</div>
+                    <h5 className="fw-bold mt-1 mb-0">{count}</h5>
+                    {lowInCat > 0 && (
+                      <span className="badge bg-danger mt-1 rounded-pill">
+                        {lowInCat} bajo
+                      </span>
+                    )}
+                  </div>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {activeTab === "productos" && (
+        <div className="card shadow-sm mb-4">
+          <div className="card-body">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h6 className="fw-semibold mb-0">
+                {categoryFilter === "Todos"
+                  ? "Todos los Productos"
+                  : `Productos: ${categoryFilter}`}
+              </h6>
+              <span className="text-muted small">
+                {filteredProducts.length} productos encontrados
+              </span>
+            </div>
+            <div className="table-responsive">
+              <table className="table align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>Producto</th>
+                    <th>Código</th>
+                    <th>Categoría</th>
+                    <th>Stock Actual</th>
+                    <th>Stock Mín</th>
+                    <th>Precio</th>
+                    <th>Ubicación</th>
+                    <th>Estado</th>
+                    <th className="text-end">Acc</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProducts.length === 0 ? (
                     <tr>
-                      <th>Producto</th>
-                      <th>Código</th>
-                      <th>Categoría</th>
-                      <th>Stock</th>
-                      <th>Estado</th>
-                      <th>Precio compra</th>
-                      <th>Precio venta</th>
+                      <td colSpan={9} className="text-center text-muted py-4">
+                        {search || categoryFilter !== "Todos"
+                          ? "No hay productos que coincidan con los filtros."
+                          : "No hay productos en el inventario."}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProducts.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="text-center text-muted py-4">
-                          {search
-                            ? "No hay productos que coincidan con la búsqueda."
-                            : "No hay productos en el inventario."}
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredProducts.map((p) => (
+                  ) : (
+                    filteredProducts.map((p) => {
+                      const low = isLowStock(p);
+                      const min = p.min_stock ?? "-";
+                      return (
                         <tr key={p.id}>
                           <td className="fw-semibold">{p.name}</td>
-                          <td>{p.code ?? "—"}</td>
+                          <td className="text-muted small">{p.code ?? "-"}</td>
                           <td>{p.category ?? "Sin categoría"}</td>
-                          <td>{p.stock}</td>
+                          <td>{p.stock} pza</td>
+                          <td>{min === "-" ? "-" : `${min} pza`}</td>
+                          <td>
+                            {p.sale_price != null ? `$${p.sale_price}` : "-"}
+                          </td>
+                          <td className="text-muted small">
+                            {p.location ?? "-"}
+                          </td>
                           <td>
                             <span
-                              className={`badge ${
-                                p.stock <= 10 ? "bg-danger" : "bg-success"
+                              className={`badge rounded-pill ${
+                                low ? "bg-primary" : "bg-secondary"
                               }`}
                             >
-                              {p.stock <= 10 ? "Bajo" : "Normal"}
+                              {low ? "Bajo" : "Normal"}
                             </span>
                           </td>
-                          <td>
-                            ${(p.purchase_price ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                          </td>
-                          <td>
-                            ${(p.sale_price ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                          <td className="text-end">
+                            <Link
+                              to="/productos"
+                              className="btn btn-sm btn-light"
+                              title="Ver producto"
+                              aria-label="Ver producto"
+                            >
+                              <i className="bi bi-eye" />
+                            </Link>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {activeTab === "movimientos" && (
-        <div className="cobrixs-card">
-          <div className="cobrixs-card-header">Historial de movimientos</div>
-          <div className="table-responsive">
-            <table className="table table-professional align-middle mb-0">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Producto</th>
-                  <th>Tipo</th>
-                  <th>Cantidad</th>
-                </tr>
-              </thead>
-              <tbody>
-                {movements.map((m) => (
-                  <tr key={m.id}>
-                    <td>{new Date(m.created_at).toLocaleString()}</td>
-                    <td>{m.products?.name}</td>
-                    <td>
-                      <span
-                        className={`badge ${
-                          m.type === "entrada"
-                            ? "bg-success"
-                            : "bg-danger"
-                        }`}
-                      >
-                        {m.type}
-                      </span>
-                    </td>
-                    <td>{m.quantity}</td>
+        <div className="card shadow-sm">
+          <div className="card-body">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h6 className="fw-semibold mb-0">
+                <i className="bi bi-arrow-left-right me-2" />
+                Historial de movimientos
+              </h6>
+              {isAdmin && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setForm({
+                      product_id: "",
+                      type: "entrada",
+                      quantity: 1,
+                      description: "",
+                    });
+                    setFormError(null);
+                    setShowModal(true);
+                  }}
+                >
+                  <i className="bi bi-plus-circle me-1" />
+                  Nuevo Movimiento
+                </button>
+              )}
+            </div>
+            <div className="table-responsive">
+              <table className="table align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Tipo</th>
+                    <th>Cantidad</th>
+                    <th>Descripción</th>
                   </tr>
+                </thead>
+                <tbody>
+                  {movements.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center text-muted py-4">
+                        No hay movimientos registrados
+                      </td>
+                    </tr>
+                  ) : (
+                    movements.map((m) => (
+                      <tr key={m.id}>
+                        <td>
+                          {new Date(m.created_at).toLocaleString("es-MX")}
+                        </td>
+                        <td>{m.products?.name ?? "-"}</td>
+                        <td>
+                          <span
+                            className={`badge ${
+                              m.type === "entrada" ? "bg-success" : "bg-danger"
+                            }`}
+                          >
+                            {m.type}
+                          </span>
+                        </td>
+                        <td>{m.quantity}</td>
+                        <td className="text-muted small">
+                          {m.description ?? "-"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "alertas" && (
+        <div className="card shadow-sm border-danger">
+          <div className="card-body">
+            <h6 className="fw-semibold mb-3">
+              <i className="bi bi-exclamation-triangle text-danger me-2" />
+              Productos con stock bajo
+            </h6>
+            {stats.lowStock.length === 0 ? (
+              <p className="text-success mb-0">
+                No hay productos con stock bajo
+              </p>
+            ) : (
+              <ul className="list-group list-group-flush">
+                {stats.lowStock.map((p) => (
+                  <li
+                    key={p.id}
+                    className="list-group-item d-flex justify-content-between align-items-center"
+                  >
+                    <span className="fw-semibold">{p.name}</span>
+                    <span className="badge bg-danger">
+                      {p.stock} restantes
+                      {p.stock <= CRITICAL_STOCK && " (crítico)"}
+                    </span>
+                  </li>
                 ))}
-              </tbody>
-            </table>
+              </ul>
+            )}
           </div>
         </div>
       )}
@@ -465,7 +646,7 @@ export default function Inventory() {
               <p className="text-muted mb-0">
                 {isAdmin
                   ? "No hay sugerencias pendientes."
-                  : "No has enviado sugerencias. Usa 'Sugerir Ajuste' para proponer cambios."}
+                  : "No has enviado sugerencias. Usa «Sugerir Ajuste» para proponer cambios."}
               </p>
             ) : (
               <div className="table-responsive">
@@ -494,19 +675,23 @@ export default function Inventory() {
                           </span>
                         </td>
                         <td>{s.quantity}</td>
-                        <td>{new Date(s.created_at).toLocaleString("es-MX")}</td>
+                        <td>
+                          {new Date(s.created_at).toLocaleString("es-MX")}
+                        </td>
                         {isAdmin && (
                           <td className="text-end">
                             <button
+                              type="button"
                               className="btn btn-sm btn-success me-1"
-                              onClick={() => handleApprove(s)}
+                              onClick={() => void handleApprove(s)}
                               disabled={saving}
                             >
                               Aprobar
                             </button>
                             <button
+                              type="button"
                               className="btn btn-sm btn-outline-danger"
-                              onClick={() => handleReject(s)}
+                              onClick={() => void handleReject(s)}
                               disabled={saving}
                             >
                               Rechazar
@@ -520,8 +705,8 @@ export default function Inventory() {
                                 s.status === "pendiente"
                                   ? "bg-warning"
                                   : s.status === "aprobado"
-                                  ? "bg-success"
-                                  : "bg-secondary"
+                                    ? "bg-success"
+                                    : "bg-secondary"
                               }`}
                             >
                               {s.status}
@@ -538,100 +723,134 @@ export default function Inventory() {
         </div>
       )}
 
-      {activeTab === "alertas" && (
-        <div className="cobrixs-card border-danger">
-          <div className="cobrixs-card-header text-danger">
-            <i className="bi bi-exclamation-triangle me-2" />
-            Alertas de Stock
-          </div>
-          <div className="cobrixs-card-body">
-            {stats.lowStock.length === 0 ? (
-              <div className="text-success">
-                No hay productos con stock bajo
-              </div>
-            ) : (
-              <ul className="list-group list-group-flush">
-                {stats.lowStock.map((p) => (
-                  <li
-                    key={p.id}
-                    className="list-group-item d-flex justify-content-between"
-                  >
-                    {p.name}
-                    <span className="badge bg-danger">
-                      {p.stock} restantes
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+      {activeTab === "analisis" && (
+        <div className="card shadow-sm">
+          <div className="card-body text-center py-5 text-muted">
+            <i className="bi bi-bar-chart fs-1 mb-3 d-block" />
+            <p className="mb-0">Análisis de inventario próximamente</p>
           </div>
         </div>
       )}
 
-      {showModal && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
+      {showModal && isAdmin && (
+        <div
+          className="modal fade show d-block inventory-modal-overlay"
+          tabIndex={-1}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="movement-modal-title"
+        >
+          <div className="modal-dialog">
+            <div className="modal-content position-relative">
               <div className="modal-header">
-                <h5 className="modal-title">Nuevo Movimiento</h5>
-                <button className="btn-close" onClick={() => setShowModal(false)} aria-label="Cerrar" />
+                <h5 id="movement-modal-title" className="modal-title">
+                  Nuevo Movimiento
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  aria-label="Cerrar"
+                  onClick={() => {
+                    setShowModal(false);
+                    setFormError(null);
+                  }}
+                />
               </div>
               <div className="modal-body">
-                {formError && <div className="alert alert-danger py-2">{formError}</div>}
-
+                {formError && (
+                  <div className="alert alert-danger py-2">{formError}</div>
+                )}
                 <div className="mb-3">
-                  <label className="form-label">Producto *</label>
+                  <label htmlFor="mov-product" className="form-label">
+                    Producto
+                  </label>
                   <select
+                    id="mov-product"
                     className="form-select"
                     value={form.product_id}
-                    onChange={(e) => setForm({ ...form, product_id: e.target.value })}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, product_id: e.target.value }))
+                    }
                     aria-label="Seleccionar producto"
                   >
                     <option value="">Seleccionar producto</option>
                     {products.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
+                      <option key={p.id} value={p.id}>
+                        {p.name} (stock: {p.stock})
+                      </option>
                     ))}
                   </select>
                 </div>
-
                 <div className="mb-3">
-                  <label className="form-label">Tipo</label>
+                  <label htmlFor="mov-type" className="form-label">
+                    Tipo
+                  </label>
                   <select
+                    id="mov-type"
                     className="form-select"
                     value={form.type}
-                    onChange={(e) => setForm({ ...form, type: e.target.value as "entrada" | "salida" })}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        type: e.target.value as "entrada" | "salida",
+                      }))
+                    }
                     aria-label="Tipo de movimiento"
                   >
                     <option value="entrada">Entrada</option>
                     <option value="salida">Salida</option>
                   </select>
                 </div>
-
                 <div className="mb-3">
-                  <label className="form-label">Cantidad</label>
+                  <label htmlFor="mov-qty" className="form-label">
+                    Cantidad
+                  </label>
                   <input
+                    id="mov-qty"
                     type="number"
-                    className="form-control"
                     min={1}
+                    className="form-control"
                     value={form.quantity}
-                    onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
-                    aria-label="Cantidad"
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        quantity: Number(e.target.value) || 1,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="mov-desc" className="form-label">
+                    Descripción (opcional)
+                  </label>
+                  <input
+                    id="mov-desc"
+                    type="text"
+                    className="form-control"
+                    placeholder="Ej. Ajuste por conteo"
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, description: e.target.value }))
+                    }
                   />
                 </div>
               </div>
-
               <div className="modal-footer">
                 <button
+                  type="button"
                   className="btn btn-secondary"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setFormError(null);
+                  }}
                 >
                   Cancelar
                 </button>
-
                 <button
+                  type="button"
                   className="btn btn-primary"
                   disabled={saving}
-                  onClick={handleSaveMovement}
+                  onClick={() => void handleSaveMovement()}
                 >
                   {saving ? "Guardando..." : "Guardar"}
                 </button>
@@ -641,39 +860,70 @@ export default function Inventory() {
         </div>
       )}
 
-      {showSuggestionModal && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+      {showSuggestionModal && !isAdmin && (
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="suggestion-modal-title"
+        >
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Sugerir Ajuste de Inventario</h5>
-                <button className="btn-close" onClick={() => setShowSuggestionModal(false)} aria-label="Cerrar" />
+                <h5 id="suggestion-modal-title" className="modal-title">
+                  Sugerir Ajuste de Inventario
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowSuggestionModal(false)}
+                  aria-label="Cerrar"
+                />
               </div>
               <div className="modal-body">
-                {formError && <div className="alert alert-danger py-2">{formError}</div>}
+                {formError && (
+                  <div className="alert alert-danger py-2">{formError}</div>
+                )}
                 <p className="text-muted small mb-3">
-                  Tu sugerencia será revisada por el administrador antes de aplicarse.
+                  Tu sugerencia será revisada por el administrador antes de
+                  aplicarse.
                 </p>
                 <div className="mb-3">
-                  <label className="form-label">Producto *</label>
+                  <label className="form-label" htmlFor="sug-product">
+                    Producto *
+                  </label>
                   <select
+                    id="sug-product"
                     className="form-select"
                     value={form.product_id}
-                    onChange={(e) => setForm({ ...form, product_id: e.target.value })}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, product_id: e.target.value }))
+                    }
                     aria-label="Seleccionar producto"
                   >
                     <option value="">Seleccionar producto</option>
                     {products.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div className="mb-3">
-                  <label className="form-label">Tipo</label>
+                  <label className="form-label" htmlFor="sug-type">
+                    Tipo
+                  </label>
                   <select
+                    id="sug-type"
                     className="form-select"
                     value={form.type}
-                    onChange={(e) => setForm({ ...form, type: e.target.value as "entrada" | "salida" })}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        type: e.target.value as "entrada" | "salida",
+                      }))
+                    }
                     aria-label="Tipo"
                   >
                     <option value="entrada">Entrada</option>
@@ -681,32 +931,54 @@ export default function Inventory() {
                   </select>
                 </div>
                 <div className="mb-3">
-                  <label className="form-label">Cantidad</label>
+                  <label className="form-label" htmlFor="sug-qty">
+                    Cantidad
+                  </label>
                   <input
+                    id="sug-qty"
                     type="number"
                     className="form-control"
                     min={1}
                     value={form.quantity}
-                    onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        quantity: Number(e.target.value) || 1,
+                      }))
+                    }
                     aria-label="Cantidad"
                   />
                 </div>
                 <div className="mb-3">
-                  <label className="form-label">Motivo o descripción</label>
+                  <label className="form-label" htmlFor="sug-desc">
+                    Motivo o descripción
+                  </label>
                   <input
+                    id="sug-desc"
                     type="text"
                     className="form-control"
                     placeholder="Opcional"
                     value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, description: e.target.value }))
+                    }
                   />
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setShowSuggestionModal(false)}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowSuggestionModal(false)}
+                >
                   Cancelar
                 </button>
-                <button className="btn btn-primary" disabled={saving} onClick={handleSaveSuggestion}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={saving}
+                  onClick={() => void handleSaveSuggestion()}
+                >
                   {saving ? "Enviando..." : "Enviar Sugerencia"}
                 </button>
               </div>
@@ -739,28 +1011,6 @@ function StatCard({ title, value, subtitle, icon, color }: StatCardProps) {
           <div className={`stat-icon ${color}`}>
             <i className={`bi ${icon}`} />
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface CategoryCardProps {
-  title: string;
-  value: number;
-  badge?: string;
-  icon: string;
-}
-
-function CategoryCard({ title, value, badge, icon }: CategoryCardProps) {
-  return (
-    <div className="col-6 col-md-4 col-xl-2">
-      <div className="cobrixs-card text-center h-100">
-        <div className="cobrixs-card-body">
-          <i className={`bi ${icon} fs-3 mb-2 d-block`} />
-          <div className="fw-semibold">{title}</div>
-          <h4 className="fw-bold mt-2">{value}</h4>
-          {badge && <span className="badge bg-danger mt-2">{badge}</span>}
         </div>
       </div>
     </div>
