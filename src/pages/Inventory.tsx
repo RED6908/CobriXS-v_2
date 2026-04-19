@@ -16,8 +16,8 @@ import type { Product, InventorySuggestion } from "../types/database";
 
 type Tab = "productos" | "movimientos" | "alertas" | "sugerencias" | "analisis";
 
-/** Tarjetas del tab Análisis: `badge` y `highlight` son opcionales (evita uniones incompatibles en TS). */
-type InventoryAnalisisCard = {
+/** Tarjetas del tab Análisis: opcionales evitan que TS exija todas las claves en cada literal del array. */
+export type InventoryAnalisisCard = {
   id: string;
   title: string;
   value: string;
