@@ -1,21 +1,31 @@
+import { Suspense, lazy } from "react";
 import { createBrowserRouter } from "react-router-dom";
 
-import Dashboard from "./pages/Dashboard";
-import DashboardLayout from "./layout/DashboardLayout";
-import Users from "./pages/Users";
-import Products from "./pages/Products";
-import Inventory from "./pages/Inventory";
-import Cashier from "./pages/Cashier";
-import SupplierPayments from "./pages/SupplierPayments";
-import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Settings from "./pages/Settings";
-
 import ProtectedRoute from "./components/ProtectedRoute";
 
-export const router = createBrowserRouter([
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const DashboardLayout = lazy(() => import("./layout/DashboardLayout"));
+const Users = lazy(() => import("./pages/Users"));
+const Products = lazy(() => import("./pages/Products"));
+const Inventory = lazy(() => import("./pages/Inventory"));
+const Cashier = lazy(() => import("./pages/Cashier"));
+const SupplierPayments = lazy(() => import("./pages/SupplierPayments"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Settings = lazy(() => import("./pages/Settings"));
 
+function RouteFallback() {
+  return (
+    <div className="d-flex justify-content-center align-items-center vh-100">
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Cargando…</span>
+      </div>
+    </div>
+  );
+}
+
+export const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
@@ -30,57 +40,86 @@ export const router = createBrowserRouter([
     path: "/",
     element: (
       <ProtectedRoute>
-        <DashboardLayout />
+        <Suspense fallback={<RouteFallback />}>
+          <DashboardLayout />
+        </Suspense>
       </ProtectedRoute>
     ),
 
     children: [
-
       {
         index: true,
-        element: <Dashboard />,
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <Dashboard />
+          </Suspense>
+        ),
       },
 
       {
         path: "usuarios",
-        element: <Users />,
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <Users />
+          </Suspense>
+        ),
       },
 
       {
         path: "productos",
-        element: <Products />,
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <Products />
+          </Suspense>
+        ),
       },
 
       {
         path: "inventario",
-        element: <Inventory />,
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <Inventory />
+          </Suspense>
+        ),
       },
 
       {
         path: "pos",
-        element: <Cashier />,
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <Cashier />
+          </Suspense>
+        ),
       },
 
       {
         path: "provedores",
-        element: <SupplierPayments />,
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <SupplierPayments />
+          </Suspense>
+        ),
       },
 
       {
         path: "reportes",
         element: (
           <ProtectedRoute role="admin">
-            <Reports />
+            <Suspense fallback={<RouteFallback />}>
+              <Reports />
+            </Suspense>
           </ProtectedRoute>
         ),
       },
 
       {
         path: "configuracion",
-        element: <Settings />,
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <Settings />
+          </Suspense>
+        ),
       },
-
     ],
   },
-
 ]);
