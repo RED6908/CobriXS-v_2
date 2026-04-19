@@ -7,7 +7,22 @@ import { VitePWA } from "vite-plugin-pwa";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname);
 
+/** En Vercel solo exigimos Supabase en producción; los previews pueden usar vars de entorno "Preview". */
+function assertVercelProductionSupabaseEnv(): void {
+  if (!process.env.VERCEL) return;
+  if (process.env.VERCEL_ENV !== "production") return;
+  const url = process.env.VITE_SUPABASE_URL?.trim();
+  const key = process.env.VITE_SUPABASE_ANON_KEY?.trim();
+  if (!url || !key) {
+    throw new Error(
+      "Faltan VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY en Vercel (entorno Production). Project → Settings → Environment Variables."
+    );
+  }
+}
+
 export default defineConfig(({ mode }) => {
+  assertVercelProductionSupabaseEnv();
+
   const env = loadEnv(mode, rootDir, "");
   const hasSupabase =
     Boolean(env.VITE_SUPABASE_URL?.trim()) &&
