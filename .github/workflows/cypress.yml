@@ -20,19 +20,27 @@ jobs:
       - name: Instalar Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
+          cache: npm
 
       - name: Instalar dependencias
-        run: npm install
+        run: npm ci
 
+      # Sin estos secrets el build sigue, pero la app puede fallar al cargar Supabase.
+      # Añade en GitHub → Settings → Secrets: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
       - name: Construir proyecto (TypeScript)
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
 
-      - name: Levantar servidor
-        run: npm run preview &
+      - name: Levantar servidor (preview en 4173)
+        run: npm run preview -- --host 127.0.0.1 --port 4173 &
 
       - name: Esperar servidor
-        run: npx wait-on http://localhost:4173
+        run: npx wait-on http://127.0.0.1:4173
 
       - name: Ejecutar Cypress
-        run: npx cypress run
+        env:
+          CYPRESS_baseUrl: http://127.0.0.1:4173
+        run: npx cypress run --config-file tests/e2e/cypress.config.ts
